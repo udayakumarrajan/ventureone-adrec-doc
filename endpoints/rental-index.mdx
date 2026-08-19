@@ -1,0 +1,47 @@
+---
+title: "Rental Index"
+description: "The official rent index / rent-cap data used to validate revenue models."
+---
+
+<Note>**TLS only.** Aggregate market data — no personal data.</Note>
+
+```http
+GET /rental-index?district={districtId}&propertyType={type}
+```
+
+Returns the official rental index and rent-cap figures for an area and property type, used to validate an offering's revenue model and permissible rent increases (checklist step 28).
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `district` | int | **REQUIRED** | District lookup id |
+| `community` | int | OPTIONAL | Narrow to community |
+| `propertyType` | string | **REQUIRED** | `constant` from `propertyType` |
+| `bedrooms` | int | OPTIONAL | Unit size band |
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `indexLow` / `indexHigh` | number | **REQUIRED** | Annual rent band (AED) for the segment |
+| `indexMedian` | number | **REQUIRED** | Median annual rent |
+| `maxIncreasePercentage` | number | **REQUIRED** | Rent-cap ceiling for renewals |
+| `currency` | string | **REQUIRED** | `AED` |
+| `effectiveDate` | date | **REQUIRED** | Index publication date |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<ResponseExample>
+```json Response
+{
+  "indexLow": 150000,
+  "indexHigh": 210000,
+  "indexMedian": 178000,
+  "maxIncreasePercentage": 5,
+  "currency": "AED",
+  "effectiveDate": "2026-07-01T00:00:00Z",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

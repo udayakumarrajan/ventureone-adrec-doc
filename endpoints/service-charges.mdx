@@ -1,0 +1,41 @@
+---
+title: "Service Charges"
+description: "Community / service-charge status for net-income modelling."
+---
+
+<Note>**TLS only.** Property-level financial data — no personal data.</Note>
+
+```http
+GET /property/service-charges/{plotID}
+```
+
+Returns the service-charge / community-fee position for a property, an input to net-distributable-income modelling (checklist step 29). Feeds the platform's `property_revenue_reports.service_charges`.
+
+## Response
+
+| Field | Type | Req. | Maps to / use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Property key |
+| `annualServiceCharge` | number | **REQUIRED** | Annual community/service fee |
+| `ratePerSqm` | number | OPTIONAL | Basis of the charge |
+| `currency` | string | **REQUIRED** | `AED` |
+| `managementCompanyEn` | string | OPTIONAL | OA / management company |
+| `outstandingBalance` | number | **REQUIRED** | Arrears → net-income risk |
+| `paidUntil` | date | OPTIONAL | Coverage period |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<ResponseExample>
+```json Response
+{
+  "plotID": 506999,
+  "annualServiceCharge": 22000,
+  "ratePerSqm": 104.6,
+  "currency": "AED",
+  "managementCompanyEn": "SE16 Owners Association",
+  "outstandingBalance": 0,
+  "paidUntil": "2026-12-31T00:00:00Z",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

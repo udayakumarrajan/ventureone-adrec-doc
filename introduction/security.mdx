@@ -1,0 +1,95 @@
+---
+title: "Security & encryption"
+description: "TLS, asymmetric JWE payload encryption for PII, mutual certificates, and request signing — the rules every endpoint follows."
+---
+
+All traffic runs over **TLS 1.2+**. On top of transport security, any payload carrying **personal data (PII)** is encrypted end-to-end as an asymmetric **JWE**, so the sensitive body is unreadable even to anything that terminates TLS between VentureOne and ADREC.
+
+<Info>
+  Each endpoint is tagged so ADREC knows how to treat it:
+
+  **🔒 Encrypted payload** — the body (or a defined section of it) is a single JWE.<br />
+  **TLS only** — no personal data; plain JSON over TLS.
+</Info>
+
+## When to encrypt
+
+Encrypt a payload when it contains personal data: Emirates ID, trade licence, unified number, owner or tenant names, beneficial-owner identities, or any natural-person identifier. Endpoints that carry only non-personal registry data (reference lists, geo codes, valuations, fee quotes, tokenization annotations) use **TLS only**.
+
+Each endpoint's badge states this, and names the direction(s) that are encrypted (request, response, or both).
+
+## Method — asymmetric JWE
+
+The encrypted body is a **compact JWE** using:
+
+| Layer | Algorithm | Header |
+| --- | --- | --- |
+| Key management | RSA-OAEP-256 (asymmetric key wrap) | `"alg": "RSA-OAEP-256"` |
+| Content encryption | AES-256-GCM (authenticated) | `"enc": "A256GCM"` |
+| Key identification | Key ID for rotation | `"kid": "adrec-2026-01"` |
+
+A random Content Encryption Key (CEK) encrypts the body with `A256GCM`; the CEK is wrapped with the recipient's **public** RSA key via `RSA-OAEP-256`. Only the holder of the matching **private** key can unwrap it. `A256GCM` provides integrity on the ciphertext, so the encrypted body is also tamper-evident.
+
+## Granularity — whole payload by default
+
+<Warning>
+  **Encryption granularity rule.** If a payload has **more than one field** that must be encrypted, encrypt the **entire payload** as a single JWE — never field-by-field. Encrypt only a bounded **section** (a specific array or object) when that section is the *only* sensitive part of an otherwise non-personal payload.
+</Warning>
+
+This gives **one encrypt and one decrypt per call** — no per-field latency, and no risk of a sensitive field being left in clear text. In practice almost every PII payload here carries multiple personal fields (e.g. name + Emirates ID + licence), so the **whole body** is the JWE. Where only one region is personal (e.g. a large registry response whose only PII is an `ownerships[]` array), a page may instead specify encrypting just that section — and each such case is called out explicitly on the endpoint.
+
+## Transport envelope
+
+The JWE compact string is carried inside a JSON envelope with `Content-Type: application/json`:
+
+<CodeGroup>
+```json Logical body (before encryption)
+{
+  "identifierType": "TRADE_LICENSE",
+  "identifierValue": "CN-1298819"
+}
+```
+
+```json On the wire (whole body encrypted)
+{
+  "payload": "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoiYWRyZWMtMjAyNi0wMSJ9.T8kQx3Rp9mV2LdY6bWc7hJf1aZ5oS9uNqE4rP0iGxB3lKvChZ2wYpN4mLbQ.Hk9sT2wYpN4mLbQ.dF6gH1jK8nR3vX0zC5bM7wQ2eA9tY4uP6sL1oI8kZ7cV.pQ7wZ2mK9nB4xR1tG3yH"
+}
+```
+</CodeGroup>
+
+When only a section is encrypted, that section's value is the JWE string and the rest of the JSON is clear:
+
+```json Section-only encryption
+{
+  "propertyId": 506999,
+  "ownerships": "eyJhbGciOiJSU0EtT0FFUC0yNTYi..."
+}
+```
+
+## Key direction & mutual certificates
+
+Encryption is **directional** — each side encrypts *to the other's* public key:
+
+| Direction | Encrypted with | Decrypted with |
+| --- | --- | --- |
+| Request → ADREC | ADREC's **public** certificate | ADREC's private key |
+| Response → VentureOne | VentureOne's **public** certificate | VentureOne's private key |
+
+Certificates are **X.509**, exchanged out-of-band, and identified per message by `kid` so keys can rotate without downtime. Both parties publish current and next certificates ahead of rotation.
+
+## Integrity & signing
+
+Requests and webhooks are **signed** independently of encryption, so the recipient can verify authenticity and origin:
+
+- **JWS** over the request/webhook body, or
+- **HMAC-SHA256** with a shared secret (`X-Signature` header + timestamp to prevent replay).
+
+Webhooks are **always signed** — even when they carry no PII and are therefore not encrypted. See [Change Webhooks](/endpoints/change-webhooks#signature).
+
+## Authentication
+
+<Warning>
+  The auth scheme is **not yet finalised**. VentureOne's ADREC client is scaffolding: credentials live in a runtime `integration_configs` store (`provider = "adres"`) holding an API key/secret pair, but the real scheme — bearer token, HMAC signature, or mTLS — is an open item for ADREC to confirm. Treat this section as a proposal.
+</Warning>
+
+Proposed: mutual TLS at the transport layer **plus** a per-request signature (above). Credentials and certificate material are provisioned out-of-band and stored server-side; they are never placed in URLs or query strings.

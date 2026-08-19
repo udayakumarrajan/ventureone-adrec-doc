@@ -1,0 +1,99 @@
+---
+title: "Scope & reconciliation"
+description: "How the API checklist, the earlier property draft, and the platform data model were reconciled into one endpoint set — with consolidations and open gaps called out."
+---
+
+This reference reconciles **three sources**:
+
+1. **The API checklist** — VentureOne's master list of 41 integration steps across issuer onboarding, licensing, tenancy, beneficial ownership, and monitoring.
+2. **The earlier property draft** — the property-only reference previously shared with ADREC (owner properties, details, deed, plan, valuation, reference data, tokenization flag, webhook).
+3. **The platform data model** — the `assets`, `offerings`, `subscriptions`, `tenant_lease_summaries`, `property_managers`, and beneficial-ownership tables the integration actually feeds.
+
+The checklist has **41 rows**; **31** require ADREC. Rather than expose 31 flat endpoints, related calls are consolidated into **19 endpoints + 1 webhook** behind stable resources. The mapping is below.
+
+## Checklist → endpoint mapping
+
+<Note>
+  "Owning service" is the VentureOne microservice that calls ADREC — shown so ADREC can see which system drives each call. Rows marked *No* in the checklist (Sumsub KYC, on-chain mint) are out of scope and omitted.
+</Note>
+
+| # | Checklist step | Type | Consolidated endpoint |
+| --- | --- | --- | --- |
+| 2 | Verify owner/issuer registration ID / trade licence | READ | [Party Verification](/endpoints/party-verification) |
+| 20–23 | Verify property-manager / broker / valuer / developer | READ | [Party Verification](/endpoints/party-verification) |
+| 24 | Daily licensed-PM list sync | READ (batch) | [Licensed Party Registry](/endpoints/licensed-party-registry) |
+| 25 | PM licence status monitoring | READ | [Licensed Party Registry](/endpoints/licensed-party-registry) |
+| 3 | Portfolio by registration ID | READ | [Owner Properties](/endpoints/owner-properties) |
+| 4 | Property / unit details | READ | [Property Details](/endpoints/property-details) |
+| 9 | Zoning / permitted-use | READ | [Property Details](/endpoints/property-details) (`propertyUsage`, `permittedUse`) |
+| 10 | Encumbrances / liens / mortgages | READ | [Property Details](/endpoints/property-details) (`mortgages[]`, `isMortgaged`) |
+| 11 | Restrictions / freezes / disputes | READ | [Property Details](/endpoints/property-details) (`blockings[]`, `endowmentContracts[]`) |
+| 13 | Freshness re-check (at draft) | READ | [Property Status](/endpoints/property-status) |
+| 14 | Authoritative title state (review) | READ | [Title State](/endpoints/title-state) |
+| 12 | Ownership & transaction history | READ | [Ownership History](/endpoints/ownership-history) |
+| 6 | Valuation record | READ | [Valuation](/endpoints/valuation) |
+| 5 | Title deed retrieval | READ | [Documents](/endpoints/documents) (`docType=TITLE_DEED`) |
+| 7 | Building completion / structural certificate | READ | [Documents](/endpoints/documents) (`docType=COMPLETION_CERT`) |
+| 8 | Site plan / survey / floor plan | READ | [Documents](/endpoints/documents) (`docType=SITE_PLAN…`) |
+| 40 | Community / project / building master data | READ | [Reference Data](/endpoints/reference-data) |
+| 41 | Area / zone / emirate codes | READ | [Reference Data](/endpoints/reference-data) |
+| 18 | Transfer / registration fee calculation | READ | [Fee Quote](/endpoints/fee-quote) |
+| 15 | Register SPV as legal owner / transfer title | WRITE | [Registry Transactions](/endpoints/registry-transactions) (`TITLE_TRANSFER`) |
+| 16 | Place tokenization annotation / restriction | WRITE | [Registry Transactions](/endpoints/registry-transactions) (`TOKENIZATION_ANNOTATION`) |
+| 17 | Register mortgage/charge in SPV's favour | WRITE | [Registry Transactions](/endpoints/registry-transactions) (`CHARGE_REGISTRATION`) |
+| 37 | Release annotation / deregister | WRITE | [Registry Transactions](/endpoints/registry-transactions) (`ANNOTATION_RELEASE`) |
+| 19 | Fee payment / receipt | WRITE | [Fee Payment](/endpoints/fee-payment) |
+| 26 | Register / query tenancy contract (Tawtheeq) | READ/WRITE | [Tenancy](/endpoints/tenancy) |
+| 27 | Occupancy / tenancy status | READ | [Tenancy](/endpoints/tenancy) |
+| 28 | Rental index / rent-cap data | READ | [Rental Index](/endpoints/rental-index) |
+| 29 | Service charge / community fee status | READ | [Service Charges](/endpoints/service-charges) |
+| 31–36 | Beneficial-owner add / update / remove / batch / read | READ/WRITE | [Beneficial Owners](/endpoints/beneficial-owners) |
+| 38 | Webhook: title / ownership / encumbrance change | WEBHOOK | [Change Webhooks](/endpoints/change-webhooks) |
+| 39 | Webhook: tenancy change | WEBHOOK | [Change Webhooks](/endpoints/change-webhooks) |
+
+## Consolidations & why
+
+<AccordionGroup>
+  <Accordion title="Five licence checks → one Party Verification endpoint">
+    Steps 2 and 20–23 all answer the same question — "is this party who they claim to be, and are they licensed?" — for different party types. They share a request/response shape, so they collapse into one `POST /parties/verify` with a `partyType` discriminator (`OWNER_ISSUER`, `PROPERTY_MANAGER`, `BROKER`, `VALUER`, `DEVELOPER`). **Trade-off:** one endpoint means one response schema with some party-type-specific optional fields, versus five tightly-typed endpoints. Chosen because it keeps the contract small and lets ADREC add party types without new paths.
+  </Accordion>
+  <Accordion title="Four registry writes → one Registry Transactions endpoint">
+    Steps 15, 16, 17, and 37 are all mutations of the same title record and share the same saga semantics (idempotency key, quote → commit → receipt, evidence reference). They collapse into `POST /registry/transactions` with a `transactionType` discriminator. **Trade-off:** a single endpoint with a typed union payload is harder to statically type than four endpoints, but it guarantees consistent idempotency, signing, and receipt handling across every registry write — which matters because these are the only calls that change ADREC state.
+  </Accordion>
+  <Accordion title="Document retrievals → one Documents endpoint">
+    The title deed (5), completion certificate (7), and site plan / survey / floor plan (8) are all "fetch a registry document for this property." They collapse into `GET /property/documents/{plotID}` with a `docType` filter returning a uniform document descriptor. **Valuation (6) stays separate** because it feeds a *numeric* offering input (`valuationAmount`), not just a file. **Trade-off:** valuation could have folded in as another `docType`, but that would bury a required financial field inside a document list.
+  </Accordion>
+  <Accordion title="Encumbrances & zoning are already inside Property Details">
+    Steps 9, 10, and 11 are not separate calls — the property record already returns `propertyUsage`/`permittedUse`, `mortgages[]`/`isMortgaged`, and `blockings[]`/`endowmentContracts[]` inline. Splitting them out would mean re-fetching the same record. They are documented as fields of [Property Details](/endpoints/property-details), not endpoints.
+  </Accordion>
+  <Accordion title="Freshness vs. title state — deliberately two endpoints">
+    Step 13 (freshness re-check) and 14 (authoritative title state) look similar but serve different needs. Freshness is a **cheap, frequent** poll — "has anything changed since I last read this?" — returning a timestamp and a few flags. Title state is an **expensive, signed** snapshot captured once as **compliance evidence**. Merging them would force every cheap poll to produce a signed legal artefact. Kept separate.
+  </Accordion>
+  <Accordion title="Six beneficial-owner calls → one REST resource">
+    Steps 31–36 are CRUD + batch over one register, so they map to standard verbs on `/beneficial-owners` (POST / PATCH / DELETE / GET) plus a `:batchSync` action. Secondary-trade updates (36) reuse PATCH.
+  </Accordion>
+</AccordionGroup>
+
+## Gaps & items to confirm with ADREC
+
+<Warning>
+  These are unresolved. Each needs ADREC to confirm whether the data exists and how it is exposed.
+</Warning>
+
+- **Auth scheme is undefined.** The platform's ADREC client (`terreno/services/compliance/adres_client.py`) is placeholder scaffolding — auth is a TODO (bearer? HMAC? mTLS?), base URL is a stub, and credentials are runtime config, not env. The auth section here is a **proposal**, not a confirmed contract.
+- **Naming.** The codebase calls the provider **`adres`**; this document uses **ADREC**. Confirm the canonical name for the contract.
+- **Completion / structural certificate (7).** The earlier draft had no equivalent. Confirm ADREC issues a machine-retrievable completion or structural-integrity certificate, and whether it is a document, structured fields, or both.
+- **Zoning / permitted-use (9).** The property record exposes `propertyUsage`; confirm whether a distinct *permitted-use / zoning* field exists separately from usage.
+- **Ownership & transaction history (12).** Confirm ADREC exposes prior-sale provenance, and how far back.
+- **Registry writes (15–19).** Title transfer, charge registration, and fee payment assume ADREC offers a **programmatic write API** with idempotency. If these are manual/portal-only today, VentureOne needs the manual SLA instead.
+- **Beneficial-ownership register (31–37).** Confirm the register exists as an API, its identity granularity (per investor vs. aggregate), and whether secondary trades must be reported (36).
+- **Tenancy write (26).** Confirm whether VentureOne only *reads* Tawtheeq or must also *register* contracts.
+- **Webhook vs. polling (38–39).** If ADREC cannot push webhooks, the [polling fallback](/endpoints/change-webhooks#polling-fallback) becomes mandatory.
+
+## Fields the data model needs that the checklist did not name
+
+Derived from the `assets` / `offerings` / `tenant_lease_summaries` tables the integration populates:
+
+- `assets.registry_reference` and `assets.registry_validated` — require a stable ADREC key (`propertyId` / `titleDeedNumber`) and a verifiable "matches registry" signal. Covered by [Property Details](/endpoints/property-details) + [Title State](/endpoints/title-state).
+- `assets.legal_approved` — depends on encumbrance/eligibility flags (`isTradable`, `isSellable`, `blockings[]`). Covered by Property Details.
+- Revenue modelling (`property_revenue_reporting_models`, `tenant_lease_summaries`) — needs occupancy, rent index, and service-charge inputs. Covered by [Tenancy](/endpoints/tenancy), [Rental Index](/endpoints/rental-index), [Service Charges](/endpoints/service-charges).

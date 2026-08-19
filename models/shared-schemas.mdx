@@ -1,0 +1,54 @@
+---
+title: "Shared schemas"
+description: "Reusable objects referenced across endpoints — Owner, Party, Mortgage, Project."
+---
+
+<Note>
+  Coded fields (property type, district, ownership method…) are plain **objects** with `constant` + English/Arabic labels, described in [Conventions → Coded fields](/introduction/conventions#coded-fields-object-shape). They are typed `object` / `object[]` directly in each endpoint, so there is no separate type to look up.
+</Note>
+
+## Owner
+
+Ownership record on a property (see [Property Details](/endpoints/property-details), [Title State](/endpoints/title-state)).
+
+| Field | Type | Req. | Notes |
+| --- | --- | --- | --- |
+| `ownerId` | int | **REQUIRED** | Registry owner id |
+| `ownerNameEn` / `Ar` | string | **REQUIRED** | Owner identity (PII) |
+| `ownerShare` | number | **REQUIRED** | Percentage held |
+| `ownershipMethodEn` / `Ar` | string | **REQUIRED** | Freehold / Musataha / Usufruct / Grant |
+| `ownerType` | int | **REQUIRED** | Individual / company / government |
+| `eidNumber` | string | CONDITIONAL | Individuals (PII) |
+| `licenseNumber` / `licenseExpiryDate` / `legalFormID` | mixed | CONDITIONAL | Entities |
+
+## Party
+
+A transaction party in [Registry Transactions](/endpoints/registry-transactions).
+
+| Field | Type | Req. | Notes |
+| --- | --- | --- | --- |
+| `type` | enum | **REQUIRED** | `INDIVIDUAL` · `ENTITY` |
+| `nameEn` | string | **REQUIRED** | Legal name (PII) |
+| `eidNumber` | string | CONDITIONAL | Individuals |
+| `licenseNumber` | string | CONDITIONAL | Entities |
+| `registryId` | string | OPTIONAL | ADREC party id from [Party Verification](/endpoints/party-verification) |
+
+## Mortgage
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `contractNumber` | string | Registry contract id |
+| `mortgageAmount` | number | Secured amount |
+| `mortgageTypeEn` / `Ar` | string | Classification |
+| `startDate` / `endDate` / `issueDate` | date | ISO-8601 |
+| `bankEn` / `Ar`, `mortgageDegree`, `isActive` | mixed | Lender + priority + status |
+
+## Project
+
+Off-plan / developer context (see [Property Details](/endpoints/property-details) `realEstateProject`).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `projectNumber`, `projectNameEn` / `Ar` | string | Project identity |
+| `projectStatus`, `projectType` | int / string | Status / type |
+| `developer.developerNameEn` / `Ar`, `developerTradeLicenceNumber` | string | Developer — cross-check via [Party Verification](/endpoints/party-verification) |

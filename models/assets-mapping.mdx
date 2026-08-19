@@ -1,0 +1,57 @@
+---
+title: "assets / offering mapping"
+description: "How ADREC fields map onto VentureOne's assets and offerings data model — and what the issuer supplies instead."
+---
+
+This is the field-level bridge between ADREC's registry data and the platform's `assets` and `offerings` tables.
+
+## `assets` ← ADREC
+
+| `assets` field | ADREC source | Req. |
+| --- | --- | --- |
+| `registry_reference` | `propertyId` / `titleDeedNumber` ([Property Details](/endpoints/property-details)) | **REQUIRED** |
+| `registry_validated` | Verified via [Title State](/endpoints/title-state) signature | **REQUIRED** |
+| `location` | `district` + `community` | **REQUIRED** |
+| `property_type` | `propertyType` + `propertyClassification` | **REQUIRED** |
+| `size_sqft` | `unitArea` / `plotArea` (m² → sqft) | **REQUIRED** |
+| `emirate` | Constant `"Abu Dhabi"` | **REQUIRED** |
+| `legal_approved` | `isTradable` / `isSellable` + empty `blockings[]` | **REQUIRED** |
+| `street_address`, `postal_code` | `road` + `plotNumber`, `postalCode` | OPTIONAL |
+| `floor_number`, `total_floors` | `floorNumber`, `totalFloors` | OPTIONAL |
+| `bedrooms` / `bathrooms` / `parking_spaces` | `numberOf…` | OPTIONAL |
+| `year_built` | `constructionDate` | OPTIONAL |
+
+## `offerings` ← ADREC (partial)
+
+| `offerings` field | ADREC source | Req. |
+| --- | --- | --- |
+| `total_asset_value` | [Valuation](/endpoints/valuation) `valuationAmount` | **REQUIRED** |
+| `location`, `emirate`, `property_type` | Denormalized from the asset | **REQUIRED** |
+
+## Revenue model ← ADREC
+
+| Platform field | ADREC source |
+| --- | --- |
+| `tenant_lease_summaries.occupancy_status` | [Tenancy](/endpoints/tenancy) `occupancyStatus` |
+| `tenant_lease_summaries.rent_amount` / `lease_*` | Tenancy `annualRent`, `leaseStart/EndDate` |
+| `property_revenue_reports.service_charges` | [Service Charges](/endpoints/service-charges) `annualServiceCharge` |
+| Revenue validation | [Rental Index](/endpoints/rental-index) band + cap |
+
+## Register ← VentureOne → ADREC
+
+| Platform source | ADREC target |
+| --- | --- |
+| `subscriptions.token_quantity` + cap table | [Beneficial Owners](/endpoints/beneficial-owners) register |
+| `asset_structurings.spv_registration_reference` | [Registry Transactions](/endpoints/registry-transactions) `titleRegistrationRef` |
+
+## Issuer-provided data — **not from ADREC**
+
+Listed only to complete the picture. These populate on VentureOne, never from the registry.
+
+| Data | VentureOne field | Where |
+| --- | --- | --- |
+| Photos / gallery / video | `image_url`, `photo_urls`, `video_url` | asset |
+| Marketing name & description | `name`, `description` | asset |
+| Amenities, nearby landmarks | `amenities`, `nearby_landmarks` | asset |
+| Expected annual yield | `expected_annual_yield` | offering — financial metric |
+| Token economics | `token_price`, `total_tokens`, caps | offering |

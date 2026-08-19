@@ -1,0 +1,83 @@
+---
+title: "Owner Properties"
+description: "Resolve the properties owned by a verified identity — the entry point after issuer verification."
+---
+
+<Note>🔒 **Encrypted payload — request & response.** The Emirates ID / trade licence in the request and the owner identities in the response are PII, so both bodies are a single JWE.</Note>
+
+```http
+POST /property/owner-properties
+```
+
+Returns the properties owned by an identity — the first call after the issuer is verified. 
+
+## Request body
+
+| Field | Type | Req. | Values |
+| --- | --- | --- | --- |
+| `identifierType` | enum | **REQUIRED** | `EMIRATES_ID` · `TRADE_LICENSE` · `UNIFIED_NUMBER` |
+| `identifierValue` | string | **REQUIRED** | The ID / licence number |
+| `pageNumber` / `pageSize` | int | OPTIONAL | [Pagination](/introduction/conventions#pagination) |
+
+## Response (root)
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `properties[]` | Property[] | **REQUIRED** | Owned plots — item fields below |
+| `totalCount` | int | **REQUIRED** | Pagination total |
+| `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### `Property` — `properties[]` item
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Key for [Property Details](/endpoints/property-details) |
+| `ownershipPercentage` | number | **REQUIRED** | Ownership-proof gate |
+| `ownershipTypeNameEn` / `Ar` | string | **REQUIRED** | Ownership type |
+| `eidNumber` / `licenseNumber` | string | **REQUIRED** | Match to issuer |
+| `ownerNameEn` / `Ar` | string | **REQUIRED** | Owner identity |
+| `plotAddress`, `districtNameEn`, `communityNameEn` | string | OPTIONAL | Pick-list display |
+| `isBlocked`, `isMortgaged` | bool | OPTIONAL | Early pre-filter |
+
+<RequestExample>
+```json ① Request · decrypted
+{
+  "identifierType": "TRADE_LICENSE",
+  "identifierValue": "CN-1298819",
+  "pageNumber": 1,
+  "pageSize": 20
+}
+```
+
+```json On the wire · encrypted
+{
+  "payload": "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoiYWRyZWMtMjAyNi0wMSJ9.T8kQx3Rp9mV2LdY6bWc7hJf1aZ5oS9uNqE4rP0iGxB3lKvChZ2wYpN4mLbQ.Hk9sT2wYpN4mLbQ.dF6gH1jK8nR3vX0zC5bM7wQ2eA9tY4uP6sL1oI8kZ7cV.pQ7wZ2mK9nB4xR1tG3yH"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json ② Response · decrypted
+{
+  "properties": [
+    {
+      "plotID": 71744,
+      "ownershipPercentage": 100,
+      "ownershipTypeNameEn": "Ownership",
+      "eidNumber": "784-XXXX-XXXXXXX-X",
+      "licenseNumber": null,
+      "ownerNameEn": "Issuer Holding LLC",
+      "plotAddress": "2-137-0-23",
+      "districtNameEn": "Khalifa City",
+      "communityNameEn": "SE16",
+      "isBlocked": false,
+      "isMortgaged": false
+    }
+  ],
+  "totalCount": 1,
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+</ResponseExample>

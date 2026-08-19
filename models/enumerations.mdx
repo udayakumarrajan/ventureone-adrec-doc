@@ -1,0 +1,50 @@
+---
+title: "Enumerations"
+description: "The coded sets ADREC must provide, resolvable via Reference Data."
+---
+
+ADREC to provide the complete set — with meanings — for each field below, resolvable via [Reference Data](/endpoints/reference-data). VentureOne matches on the `constant`, never the label.
+
+## Classification
+
+| Field | Needed |
+| --- | --- |
+| `propertyType`, `propertyClassification`, `propertyUsage` | Full code → label maps |
+| `permittedUse` | Zoning / permitted-use values |
+
+## Ownership
+
+| Field | Needed |
+| --- | --- |
+| `ownershipMethod` | Freehold / Musataha / Usufruct / Grant / … |
+| `ownerType` | Individual / company / government |
+| `transactionType` | Sale / Grant / Inheritance / Transfer / Mortgage … (ownership history) |
+
+## Encumbrance & status
+
+| Field | Needed |
+| --- | --- |
+| `mortgageType`, `constructionStatus`, `serviceStatus` | Full sets |
+| `blockingType` | Legal / financial block reasons |
+
+## Operational enums (defined by this API)
+
+These are fixed by the integration contract, not registry reference data:
+
+| Enum | Values |
+| --- | --- |
+| `partyType` | `OWNER_ISSUER` · `PROPERTY_MANAGER` · `BROKER` · `VALUER` · `DEVELOPER` |
+| `identifierType` | `EMIRATES_ID` · `TRADE_LICENSE` · `UNIFIED_NUMBER` · `LICENSE_NUMBER` |
+| `licenseStatus` | `ACTIVE` · `EXPIRED` · `SUSPENDED` · `REVOKED` · `NOT_FOUND` |
+| `transactionType` (registry) | `TITLE_TRANSFER` · `TOKENIZATION_ANNOTATION` · `CHARGE_REGISTRATION` · `ANNOTATION_RELEASE` |
+| `docType` | `TITLE_DEED` · `COMPLETION_CERT` · `SITE_PLAN` · `SURVEY` · `FLOOR_PLAN` |
+| `occupancyStatus` | `OCCUPIED` · `VACANT` · `NOTICE_GIVEN` · `RENEWAL_PENDING` · `EXPIRED` |
+| `paymentFrequency` | `MONTHLY` · `QUARTERLY` · `SEMI_ANNUAL` · `ANNUAL` |
+| `eventType` (webhook) | `SALE` · `MORTGAGE` · `BLOCKING` · `OWNERSHIP_CHANGE` · `TENANCY_CHANGE` · `LICENSE_CHANGE` |
+
+## Envelope codes
+
+| Field | Needed |
+| --- | --- |
+| `status` | Success (`1`) and each failure value |
+| `errorCode` | `0` = success plus the full `errorCode → meaning` table |

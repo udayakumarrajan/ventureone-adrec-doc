@@ -1,0 +1,84 @@
+---
+title: "Licensed Party Registry"
+description: "Batch list of licensed parties and per-party licence-status monitoring for auto-invite and auto-suspend."
+---
+
+<Note>**TLS only.** Business-licence data (company names, licence numbers, validity) — not natural-person PII. Encrypt the section only if ADREC returns individual licensees' personal identifiers.</Note>
+
+Two related reads that keep VentureOne's licensed-party lists in sync with ADREC.
+
+## List licensed parties
+
+```http
+GET /parties/licensed?partyType=PROPERTY_MANAGER&updatedSince=2026-08-01T00:00:00Z
+```
+
+Batch pull of currently licensed parties, used to auto-invite newly licensed property managers. Paginated and filterable by `updatedSince` for incremental daily sync.
+
+| Query param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `partyType` | enum | **REQUIRED** | `PROPERTY_MANAGER` · `BROKER` · `VALUER` · `DEVELOPER` |
+| `updatedSince` | datetime | OPTIONAL | Incremental sync — only records changed since |
+| `pageNumber` / `pageSize` | int | OPTIONAL | [Pagination](/introduction/conventions#pagination) |
+
+Each item is a `LicensedParty`:
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `registryId` | string | **REQUIRED** | Stable key → dedupe against `property_managers` |
+| `legalNameEn` / `legalNameAr` | string | **REQUIRED** | Display / matching |
+| `licenseNumber` | string | **REQUIRED** | `property_managers.license_reference` |
+| `licenseStatus` | enum | **REQUIRED** | `ACTIVE` · `EXPIRED` · `SUSPENDED` · `REVOKED` |
+| `licenseExpiryDate` | date | **REQUIRED** | Monitoring trigger |
+| `contactEmail` / `contactPhone` | string | OPTIONAL | Auto-invite |
+
+## Monitor licence status
+
+```http
+GET /parties/{registryId}/license-status
+```
+
+Lightweight re-check of a single party's licence, polled on a schedule to auto-suspend a PM whose licence has expired or been revoked.
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `registryId` | string | **REQUIRED** | Echoes the request |
+| `licenseStatus` | enum | **REQUIRED** | Drives auto-suspend on `EXPIRED` / `REVOKED` |
+| `licenseExpiryDate` | date | **REQUIRED** | ISO-8601 |
+| `lastChangedTimestamp` | datetime | **REQUIRED** | For diffing against the last check |
+
+<Info>Prefer the [tenancy/change webhooks](/endpoints/change-webhooks) for real-time licence revocation if ADREC can push it; this poll is the fallback.</Info>
+
+<ResponseExample>
+```json GET /parties/licensed → list
+{
+  "items": [
+    {
+      "registryId": "PM-004512",
+      "legalNameEn": "Capital Estates Management LLC",
+      "legalNameAr": "كابيتال العقارية للإدارة ذ.م.م",
+      "licenseNumber": "PM-AD-88231",
+      "licenseStatus": "ACTIVE",
+      "licenseExpiryDate": "2027-01-15T00:00:00Z",
+      "contactEmail": "ops@capitalestates.example"
+    }
+  ],
+  "pageNumber": 1,
+  "pageSize": 20,
+  "totalCount": 1,
+  "status": 1,
+  "errorCode": 0
+}
+```
+
+```json GET /parties/{id}/license-status
+{
+  "registryId": "PM-004512",
+  "licenseStatus": "ACTIVE",
+  "licenseExpiryDate": "2027-01-15T00:00:00Z",
+  "lastChangedTimestamp": "2026-08-10T09:12:00Z",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

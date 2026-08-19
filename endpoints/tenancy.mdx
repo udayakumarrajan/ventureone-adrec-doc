@@ -1,0 +1,64 @@
+---
+title: "Tenancy & Occupancy"
+description: "Tawtheeq tenancy contracts and occupancy status — the inputs to revenue modelling."
+---
+
+<Note>🔒 **Encrypted payload — response.** Tenant identities are PII → single JWE. If VentureOne only needs occupancy aggregates, request the non-personal projection (below) for a TLS-only response.</Note>
+
+```http
+GET /tenancy/{plotID}
+```
+
+Returns tenancy contracts (Tawtheeq, run by ADREC) and current occupancy for a property. Consolidates checklist steps 26 (query tenancy contract) and 27 (occupancy status). This feeds the platform's `tenant_lease_summaries` and revenue projections.
+
+## Query parameters
+
+<ParamField query="view" type="enum" default="full">
+  `full` returns contract detail incl. tenant identity (PII, encrypted). `occupancy` returns only non-personal occupancy aggregates (TLS-only).
+</ParamField>
+
+## Response
+
+| Field | Type | Req. | Maps to / use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Property key |
+| `occupancyStatus` | enum | **REQUIRED** | `OCCUPIED` · `VACANT` · `NOTICE_GIVEN` · `RENEWAL_PENDING` · `EXPIRED` → `tenant_lease_summaries.occupancy_status` |
+| `contracts[]` | TenancyContract[] | CONDITIONAL | Present in `view=full` — item fields below |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### `TenancyContract` item
+
+| Field | Type | Req. | PII | Maps to |
+| --- | --- | --- | --- | --- |
+| `contractNumber` | string | **REQUIRED** | — | `tenant_lease_summaries.tenant_reference` |
+| `tenantNameEn` | string | **REQUIRED** | ✅ | Tenant identity |
+| `leaseStartDate` / `leaseEndDate` | date | **REQUIRED** | — | `lease_start` / `lease_end` |
+| `annualRent` | number | **REQUIRED** | — | `rent_amount` |
+| `paymentFrequency` | enum | **REQUIRED** | — | `MONTHLY·QUARTERLY·SEMI_ANNUAL·ANNUAL` → `payment_frequency` |
+| `renewalStatus` | object | OPTIONAL | — | `renewal_status` · coded value `{ constant, lookupNameEn, lookupNameAr }` |
+
+<Info>
+  **Tenancy write (step 26)** — whether VentureOne must *register* contracts (`POST /tenancy`) or only read them is an [open gap](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec). Documented as read-only until ADREC confirms.
+</Info>
+
+<ResponseExample>
+```json GET /tenancy/{plotID}?view=full · decrypted
+{
+  "plotID": 506999,
+  "occupancyStatus": "OCCUPIED",
+  "contracts": [
+    {
+      "contractNumber": "TAW-2026-55120",
+      "tenantNameEn": "Ahmed Corp FZE",
+      "leaseStartDate": "2026-01-01T00:00:00Z",
+      "leaseEndDate": "2026-12-31T00:00:00Z",
+      "annualRent": 180000,
+      "paymentFrequency": "QUARTERLY",
+      "renewalStatus": { "constant": "RENEWAL_PENDING", "lookupNameEn": "Renewal pending", "lookupNameAr": "قيد التجديد" }
+    }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

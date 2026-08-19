@@ -1,72 +1,124 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
-  "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
-  },
+  "name": "A",
+  "description": "The property, registry, tenancy, licensing and beneficial-ownership APIs VentureOne requires from ADREC to verify ownership, check eligibility, and tokenize an Abu Dhabi property.",
   "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#18181B",
+    "light": "#FAFAFA",
+    "dark": "#18181B"
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Space Grotesk",
+      "weight": 600
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "background": {
+    "color": {
+      "light": "#FFFFFF",
+      "dark": "#09090B"
+    },
+    "decoration": "grid"
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs",
+    "codeblocks": "dark"
+  },
+    "logo": {
+    "light": "/logo/ventureone-wordmark.svg",
+    "dark": "/logo/ventureone-logo.svg"
+  },
   "navigation": {
-    "pages": [
+    
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "introduction/overview",
+            
+              "introduction/conventions",
+              "introduction/security"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Parties & Licensing",
+            "pages": [
+              "endpoints/party-verification",
+              "endpoints/licensed-party-registry"
+            ]
+          },
+          {
+            "group": "Property Records",
+            "pages": [
+              "endpoints/owner-properties",
+              "endpoints/property-details",
+              "endpoints/property-status",
+              "endpoints/title-state",
+              "endpoints/ownership-history",
+              "endpoints/valuation",
+              "endpoints/documents",
+              "endpoints/reference-data"
+            ]
+          },
+          {
+            "group": "Registry & Title Actions",
+            "pages": [
+              "endpoints/fee-quote",
+              "endpoints/registry-transactions",
+              "endpoints/fee-payment"
+            ]
+          },
+          {
+            "group": "Tenancy & Revenue",
+            "pages": [
+              "endpoints/tenancy",
+              "endpoints/rental-index",
+              "endpoints/service-charges"
+            ]
+          },
+          {
+            "group": "Beneficial Ownership",
+            "pages": [
+              "endpoints/beneficial-owners"
+            ]
+          },
+          {
+            "group": "Change Monitoring",
+            "pages": [
+              "endpoints/change-webhooks"
+            ]
+          },
+          {
+            "group": "Data Models",
+            "pages": [
+              "models/shared-schemas",
+              "models/enumerations",
+              "models/assets-mapping"
+            ]
+          }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
     ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "website": "https://ventureone.ae"
     }
   }
 }

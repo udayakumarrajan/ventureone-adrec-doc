@@ -1,0 +1,89 @@
+---
+title: "Conventions"
+description: "Response envelope, coded fields, units, dates, and pagination used by every ADREC endpoint."
+---
+
+These conventions apply to **every** endpoint unless a page states otherwise.
+
+## Response envelope
+
+Every response wraps its payload in a common envelope so callers can branch on success uniformly.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `status` | int | `1` = success, other values = failure |
+| `responseMessage` | string | Human-readable status (optional on success) |
+| `errorCode` | int | `0` = success, non-zero = a specific error |
+
+<ResponseExample>
+```json Envelope
+{
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+</ResponseExample>
+
+## Coded fields — object shape
+
+Any classification field (property type, ownership method, district…) is returned as an **object** — never a bare string. Each such object carries the same properties:
+
+| Property | Type | Meaning |
+| --- | --- | --- |
+| `constant` | string | Stable machine key — **match on this** |
+| `lookupNameEn` | string | English label (display) |
+| `lookupNameAr` | string | Arabic label (display) |
+| `lookupId` | int | Numeric id |
+| `number` | string | Optional code, when present |
+
+```json
+{ "lookupId": 1039, "constant": "TOWNHOUSE", "lookupNameEn": "Townhouse", "lookupNameAr": "تاون هاوس" }
+```
+
+In the endpoint tables these fields are typed `object` (a single coded value) or `object[]` (a list of them). Match on `constant`, never on the display label. Resolve the full set of possible values via [Reference Data](/endpoints/reference-data).
+
+## Units, coordinates & dates
+
+| Topic | Requirement |
+| --- | --- |
+| **Areas** | Square metres. VentureOne converts to sqft for display. |
+| **Coordinates** | JSON numbers (`xCoordinate`, `yCoordinate`) in the registry's projection. |
+| **Currency** | ISO 4217 codes; amounts as JSON numbers. Registry money is `AED`. |
+| **Dates** | ISO-8601 with timezone — `2026-06-10T00:00:00Z`. No bare dates. |
+| **Booleans** | Real JSON `true`/`false`, not `1`/`0` or `"Y"`. |
+| **Identifiers** | Stable across calls. `plotID` / `propertyId` is the join key between endpoints. |
+
+## Pagination
+
+List endpoints accept `pageNumber` (1-based) and `pageSize`, and return `totalCount`.
+
+<ParamField query="pageNumber" type="integer" default="1">
+  1-based page index.
+</ParamField>
+<ParamField query="pageSize" type="integer" default="20">
+  Items per page. ADREC to confirm the maximum.
+</ParamField>
+
+```json Paginated response (shape)
+{
+  "items": [ /* … */ ],
+  "pageNumber": 1,
+  "pageSize": 20,
+  "totalCount": 143,
+  "status": 1,
+  "errorCode": 0
+}
+```
+
+## Idempotency (writes)
+
+Every write ([Registry Transactions](/endpoints/registry-transactions), [Fee Payment](/endpoints/fee-payment), [Beneficial Owners](/endpoints/beneficial-owners)) accepts an `Idempotency-Key` header. Replaying the same key returns the original result instead of performing the action twice — required for safe saga retries.
+
+```http
+Idempotency-Key: vo-txn-9f2c1a7e-4b10-4d3a-9e21-7c1b8a5d2f00
+```
+
+## Errors
+
+On failure, `status ≠ 1` and `errorCode` names the reason. ADREC to supply the full `errorCode → meaning` table via [Reference Data](/endpoints/reference-data). HTTP status codes should still reflect the class of error (`4xx` client, `5xx` server) even when the envelope carries the detail.

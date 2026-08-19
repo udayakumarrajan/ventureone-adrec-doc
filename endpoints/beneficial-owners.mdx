@@ -1,0 +1,127 @@
+---
+title: "Beneficial Owners"
+description: "Keep ADREC's beneficial-ownership register in sync with the cap table as investors subscribe and trade."
+---
+
+<Note>🔒 **Encrypted payload — request & response.** Every call carries investor identities → single JWE. Always idempotent and signed.</Note>
+
+As investors subscribe, top up, or exit, VentureOne reports the change to ADREC's beneficial-ownership register. This one REST resource covers checklist steps 31–36 (add, update, remove, batch sync, read, secondary-trade update). Register release/deregister at offering wind-down is handled by [Registry Transactions](/endpoints/registry-transactions) (`ANNOTATION_RELEASE`, step 37).
+
+<Info>
+  The platform holds only limited investor identity — `full_name`, `email`, `wallet_address`, and KYC/AML/eligibility status (no Emirates ID column). Holdings are derived from `subscriptions.token_quantity` and the cap table. The `BeneficialOwner` schema below reflects what VentureOne can actually supply; confirm ADREC's required identity granularity.
+</Info>
+
+## The `BeneficialOwner` object
+
+| Field | Type | Req. | PII | Maps to |
+| --- | --- | --- | --- | --- |
+| `beneficialOwnerId` | string | CONDITIONAL | — | ADREC's id (absent on create) |
+| `offeringReference` | string | **REQUIRED** | — | `VO-OFF-…` → the SPV/deed the register attaches to |
+| `plotID` | int | **REQUIRED** | — | The tokenized property |
+| `fullNameEn` | string | **REQUIRED** | ✅ | `investors.full_name` |
+| `email` | string | OPTIONAL | ✅ | `investors.email` |
+| `nationality` | string | OPTIONAL | ✅ | If ADREC requires it |
+| `holdingPercentage` | number | **REQUIRED** | — | Share of the offering |
+| `tokenQuantity` | number | **REQUIRED** | — | `subscriptions.token_quantity` |
+| `walletAddress` | string | OPTIONAL | — | `investors.wallet_address` |
+| `effectiveDate` | date | **REQUIRED** | — | When the holding took effect |
+
+## Add — subscribe (31)
+
+```http
+POST /beneficial-owners
+```
+
+Reports a new subscriber. Returns the created record with `beneficialOwnerId`.
+
+## Update — top-up / partial sale / secondary trade (32, 36)
+
+```http
+PATCH /beneficial-owners/{beneficialOwnerId}
+```
+
+Updates `holdingPercentage` / `tokenQuantity` after a top-up, partial sale, or (if ADREC requires) a secondary-market trade.
+
+## Remove — full exit (33)
+
+```http
+DELETE /beneficial-owners/{beneficialOwnerId}
+```
+
+Records a full exit. Body carries `offeringReference`, `plotID`, and `effectiveDate` for the audit trail.
+
+## Batch sync (34)
+
+```http
+PUT /beneficial-owners:batchSync
+```
+
+Bulk upsert of the **entire** register for an offering — the periodic reconciliation that makes ADREC match the cap table exactly.
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `offeringReference` | string | **REQUIRED** | Register scope |
+| `plotID` | int | **REQUIRED** | Property |
+| `owners[]` | BeneficialOwner[] | **REQUIRED** | Full authoritative set — ADREC replaces the register with this |
+
+## Read — reconcile (35)
+
+```http
+GET /beneficial-owners?offeringReference=VO-OFF-8842
+```
+
+Returns ADREC's current register so VentureOne can diff it against the cap table.
+
+<RequestExample>
+```json POST /beneficial-owners · decrypted
+{
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "fullNameEn": "Sara Al Mansoori",
+  "email": "sara@example.com",
+  "holdingPercentage": 2.5,
+  "tokenQuantity": 250,
+  "walletAddress": "0x9f…21b",
+  "effectiveDate": "2026-09-01T00:00:00Z"
+}
+```
+
+```json PUT :batchSync · decrypted
+{
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "owners": [
+    { "fullNameEn": "Sara Al Mansoori", "holdingPercentage": 2.5, "tokenQuantity": 250, "effectiveDate": "2026-09-01T00:00:00Z" },
+    { "fullNameEn": "Omar Trading LLC", "holdingPercentage": 10, "tokenQuantity": 1000, "effectiveDate": "2026-09-03T00:00:00Z" }
+  ]
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json POST result · decrypted
+{
+  "beneficialOwnerId": "BO-2026-770021",
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "holdingPercentage": 2.5,
+  "tokenQuantity": 250,
+  "state": "REGISTERED",
+  "evidenceRef": "EVD-BO-770021",
+  "status": 1,
+  "errorCode": 0
+}
+```
+
+```json GET register · decrypted
+{
+  "offeringReference": "VO-OFF-8842",
+  "owners": [
+    { "beneficialOwnerId": "BO-2026-770021", "fullNameEn": "Sara Al Mansoori", "holdingPercentage": 2.5, "tokenQuantity": 250 }
+  ],
+  "totalCount": 1,
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

@@ -1,0 +1,132 @@
+---
+title: "Registry Transactions"
+description: "The single write endpoint for title transfer, tokenization annotation, charge registration, and annotation release."
+---
+
+<Note>🔒 **Encrypted payload — request & response** for transaction types carrying party identities (`TITLE_TRANSFER`, `CHARGE_REGISTRATION`). `TOKENIZATION_ANNOTATION` / `ANNOTATION_RELEASE` carry no PII and are **TLS only**. Always signed; always idempotent.</Note>
+
+```http
+POST /registry/transactions
+```
+
+One endpoint for every mutation of a title record, selected by `transactionType`. Consolidates checklist steps 15 (title transfer), 16 (tokenization annotation), 17 (charge registration) and 37 (annotation release). All four share the same saga semantics — quote → commit → receipt — so they share one contract, one idempotency model, and one signing rule.
+
+<Warning>
+  These are the **only** calls that change ADREC state. Every call **must** send an `Idempotency-Key` header; replaying a key returns the original result. See [Idempotency](/introduction/conventions#idempotency-writes).
+</Warning>
+
+## Request body
+
+| Field | Type | Req. | Values / use |
+| --- | --- | --- | --- |
+| `transactionType` | enum | **REQUIRED** | `TITLE_TRANSFER` · `TOKENIZATION_ANNOTATION` · `CHARGE_REGISTRATION` · `ANNOTATION_RELEASE` |
+| `plotID` | int | **REQUIRED** | Target property |
+| `reference` | string | **REQUIRED** | VentureOne offering reference (e.g. `VO-OFF-8842`) |
+| `quoteId` | string | CONDITIONAL | Fee quote from [Fee Quote](/endpoints/fee-quote) — required when the type incurs a fee |
+| `effectiveDate` | date | OPTIONAL | ISO-8601 |
+
+### Type-specific blocks
+
+<Tabs>
+  <Tab title="TITLE_TRANSFER (15)">
+    | Field | Type | Req. | Use |
+    | --- | --- | --- | --- |
+    | `fromParty` | Party | **REQUIRED** | Current owner (issuer) — PII |
+    | `toParty` | Party | **REQUIRED** | SPV becoming legal owner — PII |
+    | `sharePercentage` | number | **REQUIRED** | Share transferred (usually `100`) |
+    | `considerationAmount` | number | **REQUIRED** | Transfer value |
+
+    Returns `titleRegistrationRef` → the SPV's new title. Feeds `asset_structurings.spv_registration_reference`.
+  </Tab>
+  <Tab title="TOKENIZATION_ANNOTATION (16)">
+    | Field | Type | Req. | Use |
+    | --- | --- | --- | --- |
+    | `action` | enum | **REQUIRED** | `SET` — mark the deed tokenized (lien protection) |
+
+    No PII → TLS only. Returns `annotationId`.
+  </Tab>
+  <Tab title="CHARGE_REGISTRATION (17)">
+    | Field | Type | Req. | Use |
+    | --- | --- | --- | --- |
+    | `beneficiaryParty` | Party | **REQUIRED** | Party the charge protects (SPV / token holders) — PII |
+    | `chargeAmount` | number | **REQUIRED** | Secured amount |
+    | `chargeType` | object | OPTIONAL | Charge / mortgage classification · coded value `{ constant, lookupNameEn, lookupNameAr }` |
+
+    Conditional (checklist marks it *conditional*). Returns `chargeRef`.
+  </Tab>
+  <Tab title="ANNOTATION_RELEASE (37)">
+    | Field | Type | Req. | Use |
+    | --- | --- | --- | --- |
+    | `annotationId` | string | **REQUIRED** | The annotation to release (offering wind-down / delisting) |
+
+    No PII → TLS only.
+  </Tab>
+</Tabs>
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `transactionRef` | string | **REQUIRED** | ADREC's id for this transaction |
+| `transactionType` | enum | **REQUIRED** | Echoes the request |
+| `state` | enum | **REQUIRED** | `PENDING` · `AWAITING_FEE` · `COMPLETED` · `REJECTED` |
+| `titleRegistrationRef` | string | CONDITIONAL | `TITLE_TRANSFER` result |
+| `annotationId` | string | CONDITIONAL | `TOKENIZATION_ANNOTATION` result |
+| `chargeRef` | string | CONDITIONAL | `CHARGE_REGISTRATION` result |
+| `feeDue` | object | CONDITIONAL | `{ quoteId, totalAmount, currency }` when `state = AWAITING_FEE` |
+| `evidenceRef` | string | **REQUIRED** | Registry evidence id → `evidence_events.evidence_ref` |
+| `signature` | string | **REQUIRED** | JWS over the result |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<RequestExample>
+```json TITLE_TRANSFER · decrypted
+{
+  "transactionType": "TITLE_TRANSFER",
+  "plotID": 506999,
+  "reference": "VO-OFF-8842",
+  "quoteId": "FQ-2026-771201",
+  "fromParty": { "type": "ENTITY", "nameEn": "Issuer Holding LLC", "licenseNumber": "CN-1298819" },
+  "toParty": { "type": "ENTITY", "nameEn": "VO SPV 8842 LTD", "licenseNumber": "ADGM-8842" },
+  "sharePercentage": 100,
+  "considerationAmount": 2750000
+}
+```
+
+```json TOKENIZATION_ANNOTATION · TLS only
+{
+  "transactionType": "TOKENIZATION_ANNOTATION",
+  "plotID": 506999,
+  "reference": "VO-OFF-8842",
+  "action": "SET"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json TITLE_TRANSFER result
+{
+  "transactionRef": "RTX-2026-0044120",
+  "transactionType": "TITLE_TRANSFER",
+  "state": "AWAITING_FEE",
+  "titleRegistrationRef": null,
+  "feeDue": { "quoteId": "FQ-2026-771201", "totalAmount": 56000, "currency": "AED" },
+  "evidenceRef": "EVD-RTX-0044120",
+  "signature": "<jws-compact>",
+  "status": 1,
+  "errorCode": 0
+}
+```
+
+```json TOKENIZATION_ANNOTATION result
+{
+  "transactionRef": "RTX-2026-0044121",
+  "transactionType": "TOKENIZATION_ANNOTATION",
+  "state": "COMPLETED",
+  "annotationId": "ANN-556677",
+  "evidenceRef": "EVD-RTX-0044121",
+  "signature": "<jws-compact>",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

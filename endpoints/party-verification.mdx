@@ -1,0 +1,86 @@
+---
+title: "Party Verification"
+description: "Verify an issuer or licensed party (property manager, broker, valuer, developer) against the ADREC registry."
+---
+
+<Note>🔒 **Encrypted payload — request & response.** Carries person/entity identifiers (Emirates ID, trade licence, unified number), so both bodies are a single JWE.</Note>
+
+```http
+POST /parties/verify
+```
+
+One endpoint for every "is this party who they claim, and are they licensed / registered?" check. A `partyType` discriminator selects the party being verified — this consolidates checklist steps 2 and 20–23. It is the gate for issuer onboarding and for admitting property managers, brokers, valuers, and developers.
+
+## Request body
+
+| Field | Type | Req. | Values / use |
+| --- | --- | --- | --- |
+| `partyType` | enum | **REQUIRED** | `OWNER_ISSUER` · `PROPERTY_MANAGER` · `BROKER` · `VALUER` · `DEVELOPER` |
+| `identifierType` | enum | **REQUIRED** | `EMIRATES_ID` · `TRADE_LICENSE` · `UNIFIED_NUMBER` · `LICENSE_NUMBER` |
+| `identifierValue` | string | **REQUIRED** | The ID / licence number |
+| `nameEn` | string | OPTIONAL | Name to cross-check against the registry record |
+
+<Info>The platform stores an issuer's `registration_number` (nearest to a trade licence) and, for licensed parties, a `license_reference`. Send whichever `identifierType` matches what VentureOne holds for that party.</Info>
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `verified` | bool | **REQUIRED** | Registry match found and identifier valid |
+| `partyType` | enum | **REQUIRED** | Echoes the request |
+| `registryId` | string | **REQUIRED** | ADREC's stable key for the party — persist for later calls |
+| `legalNameEn` / `legalNameAr` | string | **REQUIRED** | Registered legal name → cross-check onboarding |
+| `licenseStatus` | enum | **REQUIRED** | `ACTIVE` · `EXPIRED` · `SUSPENDED` · `REVOKED` · `NOT_FOUND` |
+| `licenseNumber` | string | CONDITIONAL | Required for licensed parties (PM, broker, valuer, developer) |
+| `licenseExpiryDate` | date | CONDITIONAL | ISO-8601 — drives licence-expiry monitoring |
+| `activities[]` | object[] | OPTIONAL | Permitted activities / scope — array of coded values `{ constant, lookupNameEn, lookupNameAr }` |
+| `jurisdiction` | string | OPTIONAL | Issuing authority / emirate |
+| `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+Maps to → `issuers.registration_number`, `issuers.status`, `property_managers.license_reference`, `property_managers.status`.
+
+## Party-type cheatsheet
+
+| `partyType` | Checklist | Typical `identifierType` | Gates |
+| --- | --- | --- | --- |
+| `OWNER_ISSUER` | 2 | `TRADE_LICENSE` / `EMIRATES_ID` | Issuer onboarding → portfolio lookup |
+| `PROPERTY_MANAGER` | 20 | `LICENSE_NUMBER` | PM approved status |
+| `BROKER` | 21 | `LICENSE_NUMBER` | Broker-introduced listings |
+| `VALUER` | 22 | `LICENSE_NUMBER` | Trust the valuation source |
+| `DEVELOPER` | 23 | `TRADE_LICENSE` | Off-plan / developer offerings |
+
+<RequestExample>
+```json ① Request · encrypted (Content-Type: application/json)
+{
+  "payload": "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoiYWRyZWMtMjAyNi0wMSJ9.T8kQx3Rp9mV2LdY6bWc7hJf1aZ5oS9uNqE4rP0iGxB3lKvChZ2wYpN4mLbQ.Hk9sT2wYpN4mLbQ.dF6gH1jK8nR3vX0zC5bM7wQ2eA9tY4uP6sL1oI8kZ7cV.pQ7wZ2mK9nB4xR1tG3yH"
+}
+```
+
+```json ② Request · decrypted (body ADREC processes)
+{
+  "partyType": "OWNER_ISSUER",
+  "identifierType": "TRADE_LICENSE",
+  "identifierValue": "CN-1298819",
+  "nameEn": "Issuer Holding LLC"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json ③ Response · decrypted (body VentureOne processes)
+{
+  "verified": true,
+  "partyType": "OWNER_ISSUER",
+  "registryId": "ISS-0098211",
+  "legalNameEn": "Issuer Holding LLC",
+  "legalNameAr": "شركة المُصدر القابضة ذ.م.م",
+  "licenseStatus": "ACTIVE",
+  "licenseNumber": "CN-1298819",
+  "licenseExpiryDate": "2027-03-31T00:00:00Z",
+  "jurisdiction": "Abu Dhabi",
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+</ResponseExample>

@@ -1,0 +1,59 @@
+---
+title: "Fee Quote"
+description: "Quote the government fee for a pending registry transfer, charge, or annotation before committing."
+---
+
+<Note>**TLS only.** Fee amounts and a property reference — no personal data.</Note>
+
+```http
+POST /registry/fee-quote
+```
+
+Returns the government fee for a pending registry operation so VentureOne can present and reserve it **before** committing the write (checklist step 18). The returned `quoteId` is passed to [Fee Payment](/endpoints/fee-payment) to finalise.
+
+## Request body
+
+| Field | Type | Req. | Values |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Target property |
+| `transactionType` | enum | **REQUIRED** | `TITLE_TRANSFER` · `CHARGE_REGISTRATION` · `TOKENIZATION_ANNOTATION` · `ANNOTATION_RELEASE` |
+| `considerationAmount` | number | CONDITIONAL | Required for `TITLE_TRANSFER` — the transfer value |
+| `chargeAmount` | number | CONDITIONAL | Required for `CHARGE_REGISTRATION` |
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `quoteId` | string | **REQUIRED** | Pass to [Fee Payment](/endpoints/fee-payment) |
+| `lineItems[]` | object[] | **REQUIRED** | `{ code, descriptionEn, amount }` fee breakdown |
+| `totalAmount` | number | **REQUIRED** | Total fee |
+| `currency` | string | **REQUIRED** | `AED` |
+| `validUntil` | datetime | **REQUIRED** | Quote expiry |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<RequestExample>
+```json Request
+{
+  "plotID": 506999,
+  "transactionType": "TITLE_TRANSFER",
+  "considerationAmount": 2750000
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "quoteId": "FQ-2026-771201",
+  "lineItems": [
+    { "code": "TRANSFER_FEE", "descriptionEn": "Transfer fee (2%)", "amount": 55000 },
+    { "code": "ADMIN_FEE", "descriptionEn": "Administrative fee", "amount": 1000 }
+  ],
+  "totalAmount": 56000,
+  "currency": "AED",
+  "validUntil": "2026-08-20T00:00:00Z",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

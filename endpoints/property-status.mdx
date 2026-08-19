@@ -1,0 +1,45 @@
+---
+title: "Property Status"
+description: "A cheap freshness re-check — has anything material changed since the property was last read?"
+---
+
+<Note>**TLS only.** Returns change flags and timestamps, no personal data.</Note>
+
+```http
+GET /property/status/{plotID}
+```
+
+A lightweight poll used at **draft time** to confirm ownership and status are unchanged since the property record was pulled (checklist step 13). It is intentionally cheap so it can run frequently — for the signed, legal snapshot used as compliance evidence, use [Title State](/endpoints/title-state) instead.
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Echoes the request |
+| `lastChangedTimestamp` | datetime | **REQUIRED** | Diff against the timestamp captured at last read |
+| `ownershipHash` | string | **REQUIRED** | Stable digest of the ownership set — changed ⇒ ownership moved |
+| `isMortgaged` | bool | **REQUIRED** | Fast encumbrance flag |
+| `isBlocked` | bool | **REQUIRED** | Fast legal-block flag |
+| `isTradable` / `isSellable` | bool | **REQUIRED** | Eligibility still holds |
+| `changedSections[]` | enum[] | OPTIONAL | `OWNERSHIP` · `MORTGAGE` · `BLOCKING` · `TENANCY` since a supplied `since` |
+
+<ParamField query="since" type="datetime">
+  If supplied, `changedSections[]` lists only the areas that changed after this instant.
+</ParamField>
+
+<ResponseExample>
+```json Response
+{
+  "plotID": 506999,
+  "lastChangedTimestamp": "2026-08-14T06:20:00Z",
+  "ownershipHash": "sha256:9f2c…a71b",
+  "isMortgaged": true,
+  "isBlocked": false,
+  "isTradable": true,
+  "isSellable": true,
+  "changedSections": ["MORTGAGE"],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

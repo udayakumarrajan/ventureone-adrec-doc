@@ -1,0 +1,9 @@
+/* ── Navbar logo sizing ─────────────────────────────────────────────
+   Mintlify caps the logo at h-6/h-7 (24–28px) and max-w-48 (192px).
+   Override .nav-logo to make the VentureOne logo larger.
+   Adjust the height value to taste. */
+.nav-logo {
+  height: 40px !important;
+  max-height: 40px !important;
+  max-width: none !important; /* stop the wordmark being clipped at 192px */
+}

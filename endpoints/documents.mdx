@@ -1,0 +1,79 @@
+---
+title: "Documents"
+description: "Retrieve registry documents for a property — title deed, completion certificate, site plan, survey, floor plan."
+---
+
+<Note>🔒 **Encrypted payload — response** when a document or its metadata carries owner identity (e.g. the title deed). Purely spatial documents (site plan, survey) may be **TLS only** — the badge is per `docType`, see below.</Note>
+
+```http
+GET /property/documents/{plotID}?docType=TITLE_DEED
+```
+
+One endpoint for every registry document tied to a property. Consolidates checklist steps 5 (title deed), 7 (completion / structural certificate) and 8 (site plan / survey / floor plan). Omit `docType` to list everything available.
+
+## Query parameters
+
+<ParamField query="docType" type="enum">
+  Filter to one type. Omit to return all available documents.
+  `TITLE_DEED` · `COMPLETION_CERT` · `SITE_PLAN` · `SURVEY` · `FLOOR_PLAN`
+</ParamField>
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `documents[]` | Document[] | **REQUIRED** | Available documents — item fields below |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### `Document` item
+
+| Field | Type | Req. | PII | Notes |
+| --- | --- | --- | --- | --- |
+| `docType` | enum | **REQUIRED** | — | Which document |
+| `document` | string | **REQUIRED** | — | PDF/PNG URL or base64 |
+| `documentNumber` | string | **REQUIRED** | — | e.g. title-deed number |
+| `issueDate` | date | **REQUIRED** | — | ISO-8601 |
+| `deedType` | enum | CONDITIONAL | — | Title deed only — `freehold` · `musataha` · `usufruct` · `grant` |
+| `ownerNameEn`, `ownerShare` | string / number | CONDITIONAL | ✅ | Title deed only — cross-check ownership |
+| `validUntil` | date | OPTIONAL | — | Completion certificate validity |
+
+<Warning>
+  When the response includes a title deed (`ownerNameEn` present), the whole body is PII → encrypt as one JWE. A response containing only `SITE_PLAN` / `SURVEY` / `FLOOR_PLAN` has no personal data and may be TLS-only. Because a single call can mix types, default to encrypting the whole response unless ADREC guarantees the filtered set is non-personal.
+</Warning>
+
+Maps to → `assets.registry_reference` (deed number), and the platform's seeded `asset_documents` of type `title_deed`.
+
+<ResponseExample>
+```json GET …?docType=TITLE_DEED · decrypted
+{
+  "documents": [
+    {
+      "docType": "TITLE_DEED",
+      "document": "https://.../deed.pdf",
+      "documentNumber": "AD-2026-000123",
+      "issueDate": "2022-05-01T00:00:00Z",
+      "deedType": "freehold",
+      "ownerNameEn": "Issuer Holding LLC",
+      "ownerShare": 100
+    }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+
+```json GET …?docType=SITE_PLAN · TLS only
+{
+  "documents": [
+    {
+      "docType": "SITE_PLAN",
+      "document": "https://.../site-plan.png",
+      "documentNumber": "SP-506999",
+      "issueDate": "2022-04-10T00:00:00Z"
+    }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

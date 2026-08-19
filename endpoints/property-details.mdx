@@ -1,0 +1,121 @@
+---
+title: "Property Details"
+description: "The canonical property record — attributes, ownership, encumbrances, zoning, eligibility and tenancy in one response."
+---
+
+<Note>🔒 **Encrypted payload — response.** Contains owner identities (`ownerships[]`, `eidNumber`). Encrypt the whole body; or, if preferred, encrypt only the `ownerships[]` section per the [granularity rule](/introduction/security#granularity-whole-payload-by-default).</Note>
+
+```http
+GET /property/details/{plotID}
+```
+
+The core record for a property. It is deliberately broad: it carries the attributes, ownership, encumbrances, eligibility, zoning and tenancy flags in one call
+
+## Response (root)
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyDetails[]` | Property[] | **REQUIRED** | The property record — item fields below |
+| `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### `Property` — identifiers & registration
+
+| Field | Type | Req. | Maps to / use |
+| --- | --- | --- | --- |
+| `propertyId` | int | **REQUIRED** | `assets.registry_reference` |
+| `titleDeedNumber` | string | **REQUIRED** | Deed reference |
+| `unitRegistrationNumber` | string | CONDITIONAL | Unit-level tokenization |
+| `plotNumber`, `buildingNumber`, `unitNumber` | string | OPTIONAL | Address / reference |
+| `floorNumber` | string | OPTIONAL | `assets.floor_number` |
+
+### Location
+
+| Field | Type | Req. | Maps to / use |
+| --- | --- | --- | --- |
+| `district`, `community` | object | **REQUIRED** | `assets.location` · coded value `{ constant, lookupNameEn, lookupNameAr }` |
+| `municipality`, `road` | object | OPTIONAL | Context / `assets.street_address` · coded value |
+| `xCoordinate` / `yCoordinate` | number | **REQUIRED** | Map pin |
+| `postalCode` | string | OPTIONAL | `assets.postal_code` |
+
+### Physical & classification
+
+| Field | Type | Req. | Maps to / use |
+| --- | --- | --- | --- |
+| `propertyType`, `propertyClassification` | object | **REQUIRED** | `assets.property_type` · coded value `{ constant, lookupNameEn, lookupNameAr }` |
+| `propertyUsage`, `permittedUse` | object | CONDITIONAL | Zoning / permitted-use (**step 9**) — residential / commercial · coded value |
+| `plotArea` | number (m²) | **REQUIRED** | `assets.size_sqft` |
+| `unitArea` | number (m²) | CONDITIONAL | Required for units |
+| `numberOfBedrooms` / `Bathrooms` / `Parking` / `Balconies` | int | OPTIONAL | `assets.bedrooms…` |
+| `totalFloors`, `constructionDate` | int / date | OPTIONAL | `assets.total_floors`, `year_built` |
+| `constructionStatus`, `serviceStatus` | object | OPTIONAL | Status · coded value `{ constant, lookupNameEn, lookupNameAr }` |
+
+### Ownership · **REQUIRED**
+
+| Field | Type | Req. |
+| --- | --- | --- |
+| `ownerships[]` | [Owner](/models/shared-schemas#owner)[] | **REQUIRED** |
+| `expatOwnershipPercentage` | number | OPTIONAL |
+
+### Encumbrances & eligibility · **REQUIRED** (steps 10 & 11)
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `isMortgaged`, `mortgages[]` | bool / [Mortgage](/models/shared-schemas#mortgage)[] | **REQUIRED** | Encumbrance detail (**step 10**) |
+| `blockings[]` / `partialBlockings[]` | object[] | **REQUIRED** | Legal / financial blocks (**step 11**) |
+| `endowmentContracts[]` | object[] | **REQUIRED** | Waqf → ineligible |
+| `isTradable` / `isSellable` / `isRentable` | bool | **REQUIRED** | Eligibility gate → `assets.legal_approved` |
+| `isADGM`, `onCommercialAxis`, `onInvestmentAxis` | bool | OPTIONAL | Zone flags |
+
+### Tenancy & project
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `isRented` / `rentedTill`, `tenancyAgreements[]`, `rentPayments[]`, `rentIndexAmount` | mixed | OPTIONAL | Revenue model (see [Tenancy](/endpoints/tenancy)) |
+| `isOffPlan`, `realEstateProject`, `offPlanContracts[]` | mixed | CONDITIONAL | Off-plan / developer |
+
+<ResponseExample>
+```json Response · decrypted
+{
+  "propertyDetails": [
+    {
+      "propertyId": 506999,
+      "titleDeedNumber": "AD-2026-000123",
+      "district": { "lookupId": 2511, "constant": "AL_NAHYAN", "lookupNameEn": "Al Nahyan", "lookupNameAr": "آل نهيان" },
+      "community": { "lookupId": 1311, "constant": "E19_02", "lookupNameEn": "E19_02", "lookupNameAr": "شرق 19_2" },
+      "xCoordinate": 54.38805,
+      "yCoordinate": 24.47671,
+      "propertyType": { "lookupId": 1, "constant": "UNIT", "lookupNameEn": "Unit", "lookupNameAr": "وحدة" },
+      "propertyClassification": { "lookupId": 1039, "constant": "TOWNHOUSE", "lookupNameEn": "Townhouse", "lookupNameAr": "تاون هاوس" },
+      "propertyUsage": { "lookupId": 3, "constant": "RESIDENTIAL", "lookupNameEn": "Residential", "lookupNameAr": "سكني" },
+      "plotArea": 1837.5,
+      "unitArea": 210.4,
+      "numberOfBedrooms": 3,
+      "numberOfBathrooms": 4,
+      "numberOfParking": 2,
+      "totalFloors": 3,
+      "constructionDate": "2022-05-01T00:00:00Z",
+      "ownerships": [
+        { "ownerId": 258015, "ownerNameEn": "Issuer Holding LLC", "ownerShare": 100,
+          "ownershipMethodEn": "Freehold", "ownerType": 2, "eidNumber": null, "licenseNumber": "CN-1298819" }
+      ],
+      "isMortgaged": true,
+      "mortgages": [
+        { "contractNumber": "20260000158518", "mortgageAmount": 40000, "mortgageTypeEn": "Mortgage Insurance",
+          "startDate": "2026-06-09T00:00:00Z", "endDate": "2027-06-30T00:00:00Z",
+          "bankEn": "FIRST ABU DHABI BANK P.J.S.C.", "mortgageDegree": 3 }
+      ],
+      "blockings": [],
+      "endowmentContracts": [],
+      "isTradable": true,
+      "isSellable": true,
+      "isRentable": true,
+      "isOffPlan": false,
+      "isRented": false
+    }
+  ],
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+</ResponseExample>

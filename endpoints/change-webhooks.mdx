@@ -1,0 +1,76 @@
+---
+title: "Change Webhooks"
+description: "Push notifications for any change to a tokenized property — with a polling fallback."
+---
+
+<Note>🔒 **Encrypted payload if it carries personal data · always signed.** A webhook whose `details` include owner/tenant identity is a single JWE; all webhooks are signed regardless.</Note>
+
+```http
+POST  {VentureOne callback URL}   ← ADREC calls VentureOne
+```
+
+Once a property is tokenized, VentureOne must detect **any** registry change and freeze or act on the live offering. ADREC posts an event to VentureOne's callback URL. Consolidates checklist steps 38 (title / ownership / encumbrance change) and 39 (tenancy change) into one signed event stream.
+
+## Event payload
+
+| Field | Type | Req. | Values |
+| --- | --- | --- | --- |
+| `eventId` | string | **REQUIRED** | Unique event id (for dedupe) |
+| `eventType` | enum | **REQUIRED** | `SALE` · `MORTGAGE` · `BLOCKING` · `OWNERSHIP_CHANGE` · `TENANCY_CHANGE` · `LICENSE_CHANGE` |
+| `plotID` | int | **REQUIRED** | Affected property |
+| `changedAt` | datetime | **REQUIRED** | ISO-8601 |
+| `details` | object | OPTIONAL | Event-specific payload (may carry PII → encrypted) |
+| `signature` | string | **REQUIRED** | JWS / HMAC-SHA256 over the event |
+
+## Signature
+
+Every webhook is signed so VentureOne can verify authenticity before acting. Verify the `signature` (JWS) or the `X-Signature` HMAC header **before** processing, and reject stale timestamps to prevent replay. VentureOne responds `2xx` on successful receipt; ADREC retries with backoff otherwise.
+
+## Delivery & acknowledgement
+
+| Concern | Requirement |
+| --- | --- |
+| Ack | VentureOne returns `2xx` once persisted; non-`2xx` triggers retry |
+| Retry | Exponential backoff; `eventId` lets VentureOne dedupe replays |
+| Ordering | Not guaranteed — use `changedAt` + `eventId`, re-fetch canonical state on conflict |
+
+## Polling fallback
+
+<Warning>
+  If ADREC cannot push webhooks, it **must** expose a polling endpoint so VentureOne can diff on a schedule. This becomes mandatory in that case.
+</Warning>
+
+```http
+GET /property/changes?since=2026-09-01T00:00:00Z&plotIDs=506999,71744
+```
+
+Returns the same event objects that would have been pushed, for all supplied properties changed since `since`. Equivalent per-property signal is also available via [Property Status](/endpoints/property-status) (`lastChangedTimestamp`).
+
+<ResponseExample>
+```json Webhook event (logical, before encryption)
+{
+  "eventId": "EVT-2026-99001",
+  "eventType": "MORTGAGE",
+  "plotID": 506999,
+  "changedAt": "2026-09-01T08:30:00Z",
+  "details": { "contractNumber": "20260000158518", "mortgageAmount": 40000 },
+  "signature": "<jws-compact>"
+}
+```
+
+```json GET /property/changes → polling fallback
+{
+  "events": [
+    {
+      "eventId": "EVT-2026-99001",
+      "eventType": "MORTGAGE",
+      "plotID": 506999,
+      "changedAt": "2026-09-01T08:30:00Z",
+      "details": { "contractNumber": "20260000158518", "mortgageAmount": 40000 }
+    }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

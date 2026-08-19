@@ -1,0 +1,81 @@
+---
+title: "Overview"
+description: "The data VentureOne requires from ADREC to verify ownership, check eligibility, and tokenize an Abu Dhabi property — end to end."
+---
+
+This reference defines the APIs and data fields **VentureOne requires from ADREC** (Abu Dhabi Real Estate Centre) to onboard an issuer, verify a property, transfer title into an SPV, and keep a live tokenized offering in sync with the registry.
+
+It is written **from VentureOne's side of the integration**: every endpoint, field, and encryption rule below is a request *to* ADREC, describing what we need ADREC to expose. Paths, authentication, and certificate details are proposals pending ADREC's contract.
+
+<Info>
+  This document supersedes the earlier property-only reference. It reconciles that draft with VentureOne's full API checklist and the platform's own data model. See [Scope & reconciliation](/introduction/scope-and-reconciliation) for what changed, what was consolidated, and the open gaps.
+</Info>
+
+## What VentureOne is building
+
+VentureOne tokenizes Abu Dhabi real estate. An issuer's property is verified against the ADREC registry, legal title is moved into a special-purpose vehicle (SPV), the deed is annotated as tokenized, and investors subscribe to fractional tokens. Throughout the offering's life, VentureOne must detect any registry change that affects the asset.
+
+ADREC is the **system of record** for: property attributes, ownership, encumbrances, title documents, valuations, licensed parties (property managers, brokers, valuers, developers), tenancy (Tawtheeq), and the beneficial-ownership register.
+
+## End-to-end flow
+
+<Steps>
+  <Step title="Onboard the issuer">
+    Verify the issuer's registration ID / trade licence against ADREC, then resolve the properties they own.
+    <br />→ [Party Verification](/endpoints/party-verification) · [Owner Properties](/endpoints/owner-properties)
+  </Step>
+  <Step title="Verify the property">
+    Pull the canonical property record — attributes, ownership, encumbrances, zoning, eligibility — and the supporting documents and valuation.
+    <br />→ [Property Details](/endpoints/property-details) · [Documents](/endpoints/documents) · [Valuation](/endpoints/valuation) · [Ownership History](/endpoints/ownership-history)
+  </Step>
+  <Step title="Confirm & freeze the title state">
+    Re-check freshness at draft time and capture an authoritative, signed title snapshot as compliance evidence.
+    <br />→ [Property Status](/endpoints/property-status) · [Title State](/endpoints/title-state)
+  </Step>
+  <Step title="Move title & annotate">
+    Quote registry fees, transfer title issuer → SPV, register any charge in the SPV's favour, and annotate the deed as tokenized. Pay the fee to finalise.
+    <br />→ [Fee Quote](/endpoints/fee-quote) · [Registry Transactions](/endpoints/registry-transactions) · [Fee Payment](/endpoints/fee-payment)
+  </Step>
+  <Step title="Report beneficial owners">
+    As investors subscribe and trade, keep ADREC's beneficial-ownership register in sync with the cap table.
+    <br />→ [Beneficial Owners](/endpoints/beneficial-owners)
+  </Step>
+  <Step title="Operate & monitor">
+    Track tenancy and revenue inputs, and receive webhooks for any title, ownership, encumbrance, or tenancy change so live offerings can be frozen.
+    <br />→ [Tenancy](/endpoints/tenancy) · [Rental Index](/endpoints/rental-index) · [Change Webhooks](/endpoints/change-webhooks)
+  </Step>
+</Steps>
+
+## Requirement levels
+
+Every field in this reference carries one of these markers:
+
+| Marker | Meaning |
+| --- | --- |
+| **`REQUIRED`** | Blocker — VentureOne cannot proceed without it |
+| **`OPTIONAL`** | Enrichment — improves the listing or model, not a gate |
+| **`CONDITIONAL`** | Case-specific — required only in a named scenario (e.g. units, off-plan) |
+| **`ISSUER`** | Supplied on VentureOne, **not** by ADREC — listed only to show the full picture |
+
+## API surface at a glance
+
+<CardGroup cols={2}>
+  <Card title="Parties & Licensing" href="/endpoints/party-verification">
+    Verify issuers and licensed parties; monitor licence validity.
+  </Card>
+  <Card title="Property Records" href="/endpoints/property-details">
+    Portfolio, canonical record, documents, valuation, title state, reference data.
+  </Card>
+  <Card title="Registry & Title Actions" href="/endpoints/registry-transactions">
+    Fee quote, title transfer, tokenization annotation, charge, fee payment.
+  </Card>
+  <Card title="Tenancy & Revenue" href="/endpoints/tenancy">
+    Tawtheeq contracts, occupancy, rental index, service charges.
+  </Card>
+  <Card title="Beneficial Ownership" href="/endpoints/beneficial-owners">
+    Report subscribers to the beneficial-owner register; reconcile the cap table.
+  </Card>
+  <Card title="Change Monitoring" href="/endpoints/change-webhooks">
+    Webhooks (with a polling fallback) for any change to a tokenized property.
+  </Card>
+</CardGroup>

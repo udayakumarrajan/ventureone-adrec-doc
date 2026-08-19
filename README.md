@@ -1,55 +1,27 @@
-# Mintlify Starter Kit
+# VentureOne · ADREC API Reference
 
-Use the starter kit to get your docs deployed and ready to customize.
+Mintlify documentation of the APIs and data fields VentureOne requires from **ADREC** (Abu Dhabi Real Estate Centre) to verify ownership, check eligibility, transfer title into an SPV, and keep a tokenized offering in sync with the registry.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
-
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
-
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+## Run locally
 
 ```bash
-npx skills add https://mintlify.com/docs
+cd adrec-api-docs
+npx mintlify dev
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+Then open http://localhost:3000.
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
+## Structure
 
-## Development
+| Path | Contents |
+| --- | --- |
+| `docs.json` | Mintlify config, navigation, black-and-white theme |
+| `introduction/` | Overview, scope & reconciliation, conventions, security & encryption |
+| `endpoints/` | The 19 endpoints + change webhook |
+| `models/` | Shared schemas, enumerations, `assets`/`offering` mapping |
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
+## Notes
 
-```
-npm i -g mint
-```
-
-Run the following command at the root of your documentation, where your `docs.json` is located:
-
-```
-mint dev
-```
-
-View your local preview at `http://localhost:3000`.
-
-## Publishing changes
-
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
-
-## Need help?
-
-### Troubleshooting
-
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+- **Scope** is reconciled from three sources — the API checklist (`ADREC APIs.xlsx`), the earlier property-only draft, and the platform data model. See `introduction/scope-and-reconciliation.mdx` for consolidations, conflicts, and open gaps.
+- **Encryption**: PII payloads use asymmetric JWE (`RSA-OAEP-256` + `A256GCM`); whole-payload by default. See `introduction/security.mdx`.
+- Endpoint paths, auth, and certificates are **placeholders pending ADREC's contract**.

@@ -1,0 +1,51 @@
+---
+title: "Title State"
+description: "An authoritative, signed snapshot of the title as it stands — captured once as compliance evidence."
+---
+
+<Note>🔒 **Encrypted payload — response · always signed.** Carries owner identities and is retained as legal evidence, so the body is a single JWE **and** a JWS/detached signature over the snapshot.</Note>
+
+```http
+GET /property/title-state/{plotID}
+```
+
+Returns the **authoritative state of the title** at a point in time, signed by ADREC so VentureOne can retain it as **compliance evidence** for the review record (checklist step 14). Unlike [Property Status](/endpoints/property-status), this is expensive and produces a legal artefact — call it once at review, not on a poll.
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Property key |
+| `titleDeedNumber` | string | **REQUIRED** | Deed reference |
+| `snapshotId` | string | **REQUIRED** | ADREC's id for this evidence snapshot → `evidence_events.evidence_ref` |
+| `snapshotAt` | datetime | **REQUIRED** | Instant the state was captured |
+| `owners[]` | [Owner](/models/shared-schemas#owner)[] | **REQUIRED** | Authoritative ownership set |
+| `encumbrances[]` | object[] | **REQUIRED** | Active mortgages / charges / blockings at snapshot |
+| `isTradable` / `isSellable` | bool | **REQUIRED** | Eligibility at snapshot |
+| `signature` | string | **REQUIRED** | JWS / detached signature over the snapshot |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<Info>Persist `snapshotId` + `signature` against the offering. This is what proves the title state VentureOne relied on when it approved the offering — feeding `assets.registry_validated` and the evidence trail.</Info>
+
+<ResponseExample>
+```json Response · decrypted
+{
+  "plotID": 506999,
+  "titleDeedNumber": "AD-2026-000123",
+  "snapshotId": "TS-2026-0091422",
+  "snapshotAt": "2026-08-15T10:00:00Z",
+  "owners": [
+    { "ownerId": 258015, "ownerNameEn": "Issuer Holding LLC", "ownerShare": 100,
+      "ownershipMethodEn": "Freehold", "ownerType": 2, "licenseNumber": "CN-1298819" }
+  ],
+  "encumbrances": [
+    { "type": "MORTGAGE", "contractNumber": "20260000158518", "amount": 40000, "isActive": true }
+  ],
+  "isTradable": true,
+  "isSellable": true,
+  "signature": "<jws-compact>",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

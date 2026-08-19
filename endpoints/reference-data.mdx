@@ -1,0 +1,115 @@
+---
+title: "Reference & Master Data"
+description: "The dictionary endpoint: fetch the full set of allowed values for any coded field, plus ADREC's geo and project master data."
+---
+
+<Note>**TLS only.** Public, non-personal reference data — safe to cache heavily.</Note>
+
+```http
+GET /reference/{listName}
+```
+
+## What this endpoint is for
+
+Every other endpoint returns coded fields as objects — but only the **one value** that applies to a property. For example, [Property Details](/endpoints/property-details) returns:
+
+```json
+"propertyType": { "constant": "TOWNHOUSE", "lookupNameEn": "Townhouse", "lookupNameAr": "تاون هاوس" }
+```
+
+That says *this* property is a townhouse — but not what the **other** possible types are. This endpoint is the **legend** for those codes: give it a list name and it returns every allowed value for that list, with English/Arabic labels.
+
+It answers two needs:
+
+- **Enumerations** — the complete code → label set for a coded field (all property types, all ownership methods…).
+- **Master data** — ADREC's reference catalogs: the geographic hierarchy (emirate → municipality → district → community) and the project / building registry.
+
+<Info>
+  **Why VentureOne calls it**
+  - **Build dropdowns & filters** — list every property type or district in the VentureOne UI.
+  - **Translate a code** — turn a received `constant` into a display label without hard-coding labels (labels can change; the `constant` never does).
+  - **Validate input** — confirm a `constant` is one ADREC actually recognises.
+  - **Normalise references** — align our records to ADREC's official geo hierarchy and project catalog.
+</Info>
+
+## Path & query parameters
+
+<ParamField path="listName" type="string" required>
+  Which list to return — see [Available lists](#available-lists) below. e.g. `propertyType`, `ownershipMethod`, `district`.
+</ParamField>
+
+<ParamField query="parentId" type="integer">
+  For hierarchical geo lists, return only the children of this parent — e.g. `GET /reference/community?parentId=<districtId>` returns the communities inside one district.
+</ParamField>
+
+## Available lists
+
+### Coded-field dictionaries
+
+The allowed values for the coded (`object`) fields used across the API.
+
+| `listName` | Resolves the coded field(s) | Req. |
+| --- | --- | --- |
+| `propertyType`, `propertyClassification` | Classification on [Property Details](/endpoints/property-details) | **REQUIRED** |
+| `propertyUsage`, `permittedUse` | Usage / zoning | **REQUIRED** |
+| `ownershipMethod`, `ownerType` | Ownership on [Property Details](/endpoints/property-details) & [Owner](/models/shared-schemas#owner) | **REQUIRED** |
+| `transactionType` | Events on [Ownership History](/endpoints/ownership-history) | OPTIONAL |
+| `mortgageType`, `constructionStatus`, `serviceStatus` | Encumbrance / status | OPTIONAL |
+| `errorCode` | The `errorCode → meaning` map for the [envelope](/introduction/conventions#errors) | **REQUIRED** |
+
+### Master data
+
+Reference catalogs used to normalise property references (checklist steps 40–41).
+
+| `listName` | Returns | Req. |
+| --- | --- | --- |
+| `emirate`, `municipality`, `district`, `community` | Geographic hierarchy — drill down with `parentId` (**step 41**) | **REQUIRED** |
+| `project`, `building` | Project / building registry (**step 40**) | CONDITIONAL |
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `listName` | string | **REQUIRED** | Echoes the requested list |
+| `items[]` | object[] | **REQUIRED** | The values — each a coded value `{ constant, lookupNameEn, lookupNameAr, lookupId }` |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<Tip>These lists change rarely and contain no personal data — fetch them once and cache. Match your stored data on `constant`, and use the labels only for display.</Tip>
+
+<RequestExample>
+```http Enumeration
+GET /reference/ownershipMethod
+```
+
+```http Geo drill-down
+GET /reference/community?parentId=2511
+```
+</RequestExample>
+
+<ResponseExample>
+```json GET /reference/ownershipMethod
+{
+  "listName": "ownershipMethod",
+  "items": [
+    { "lookupId": 1, "constant": "FREEHOLD", "lookupNameEn": "Freehold", "lookupNameAr": "تملك حر" },
+    { "lookupId": 2, "constant": "MUSATAHA", "lookupNameEn": "Musataha", "lookupNameAr": "مساطحة" },
+    { "lookupId": 3, "constant": "USUFRUCT", "lookupNameEn": "Usufruct", "lookupNameAr": "حق انتفاع" },
+    { "lookupId": 4, "constant": "GRANT", "lookupNameEn": "Grant", "lookupNameAr": "منحة" }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+
+```json GET /reference/community?parentId=2511
+{
+  "listName": "community",
+  "items": [
+    { "lookupId": 1311, "constant": "E19_02", "lookupNameEn": "E19_02", "lookupNameAr": "شرق 19_2" },
+    { "lookupId": 1312, "constant": "E19_03", "lookupNameEn": "E19_03", "lookupNameAr": "شرق 19_3" }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>
