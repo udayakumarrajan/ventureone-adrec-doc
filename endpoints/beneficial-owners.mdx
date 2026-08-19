@@ -5,7 +5,7 @@ description: "Keep ADREC's beneficial-ownership register in sync with the cap ta
 
 <Note>🔒 **Encrypted payload — request & response.** Every call carries investor identities → single JWE. Always idempotent and signed.</Note>
 
-As investors subscribe, top up, or exit, VentureOne reports the change to ADREC's beneficial-ownership register. This one REST resource covers checklist steps 31–36 (add, update, remove, batch sync, read, secondary-trade update). Register release/deregister at offering wind-down is handled by [Registry Transactions](/endpoints/registry-transactions) (`ANNOTATION_RELEASE`, step 37).
+As investors subscribe, top up, or exit, VentureOne reports the change to ADREC's beneficial-ownership register. This one REST resource covers add, update, remove, batch sync, read, secondary-trade update. Register release/deregister at offering wind-down is handled by [Registry Transactions](/endpoints/registry-transactions)
 
 <Info>
   The platform holds only limited investor identity — `full_name`, `email`, `wallet_address`, and KYC/AML/eligibility status (no Emirates ID column). Holdings are derived from `subscriptions.token_quantity` and the cap table. The `BeneficialOwner` schema below reflects what VentureOne can actually supply; confirm ADREC's required identity granularity.

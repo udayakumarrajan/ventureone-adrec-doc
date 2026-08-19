@@ -9,7 +9,7 @@ description: "Pay a quoted registry fee and receive the receipt that finalises t
 POST /registry/fee-payment
 ```
 
-Pays the fee for a pending [registry transaction](/endpoints/registry-transactions) and returns the receipt that **finalises** the registry write (checklist step 19). This is the committing step of the transfer/charge saga, so it is strictly idempotent.
+Pays the fee for a pending [registry transaction](/endpoints/registry-transactions) and returns the receipt that **finalises** the registry write. This is the committing step of the transfer/charge saga, so it is strictly idempotent.
 
 <Warning>
   Send an `Idempotency-Key`. A retried payment with the same key returns the original receipt and does **not** charge twice. Pair the key with the `transactionRef` so a saga can safely resume after a timeout.

@@ -9,7 +9,7 @@ description: "The single write endpoint for title transfer, tokenization annotat
 POST /registry/transactions
 ```
 
-One endpoint for every mutation of a title record, selected by `transactionType`. Consolidates checklist steps 15 (title transfer), 16 (tokenization annotation), 17 (charge registration) and 37 (annotation release). All four share the same saga semantics — quote → commit → receipt — so they share one contract, one idempotency model, and one signing rule.
+One endpoint for every mutation of a title record, selected by `transactionType`. All four share the same saga semantics — quote → commit → receipt — so they share one contract, one idempotency model, and one signing rule.
 
 <Warning>
   These are the **only** calls that change ADREC state. Every call **must** send an `Idempotency-Key` header; replaying a key returns the original result. See [Idempotency](/introduction/conventions#idempotency-writes).
