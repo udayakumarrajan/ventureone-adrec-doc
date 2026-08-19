@@ -3,7 +3,7 @@
   "theme": "mint",
   "name": "A",
   "description": "The property, registry, tenancy, licensing and beneficial-ownership APIs VentureOne requires from ADREC to verify ownership, check eligibility, and tokenize an Abu Dhabi property.",
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.ico",
   "colors": {
     "primary": "#18181B",
     "light": "#FAFAFA",
