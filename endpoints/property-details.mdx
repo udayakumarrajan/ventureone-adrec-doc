@@ -73,6 +73,12 @@ The core record for a property. It is deliberately broad: it carries the attribu
 | `isRented` / `rentedTill`, `tenancyAgreements[]`, `rentPayments[]`, `rentIndexAmount` | mixed | OPTIONAL | Revenue model (see [Tenancy](/endpoints/tenancy)) |
 | `isOffPlan`, `realEstateProject`, `offPlanContracts[]` | mixed | CONDITIONAL | Off-plan / developer |
 
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
 <ResponseExample>
 ```json Response · decrypted
 {

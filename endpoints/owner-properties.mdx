@@ -40,6 +40,11 @@ Returns the properties owned by an identity — the first call after the issuer 
 | `isBlocked`, `isMortgaged` | bool | OPTIONAL | Early pre-filter |
 
 <RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
 ```json ① Request · decrypted
 {
   "identifierType": "TRADE_LICENSE",

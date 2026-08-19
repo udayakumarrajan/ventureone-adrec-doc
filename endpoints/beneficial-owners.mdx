@@ -7,6 +7,8 @@ description: "Keep ADREC's beneficial-ownership register in sync with the cap ta
 
 As investors subscribe, top up, or exit, VentureOne reports the change to ADREC's beneficial-ownership register. This one REST resource covers add, update, remove, batch sync, read, secondary-trade update. Register release/deregister at offering wind-down is handled by [Registry Transactions](/endpoints/registry-transactions)
 
+<Note>Every mutating call here (`POST` / `PATCH` / `DELETE` / `PUT :batchSync`) is a **write**, so it carries an [`Idempotency-Key`](/introduction/conventions#idempotency-writes) alongside the `Authorization` header — both shown in the request example. The read (`GET`) needs only `Authorization`.</Note>
+
 <Info>
   The platform holds only limited investor identity — `full_name`, `email`, `wallet_address`, and KYC/AML/eligibility status (no Emirates ID column). Holdings are derived from `subscriptions.token_quantity` and the cap table. The `BeneficialOwner` schema below reflects what VentureOne can actually supply; confirm ADREC's required identity granularity.
 </Info>
@@ -73,6 +75,12 @@ GET /beneficial-owners?offeringReference=VO-OFF-8842
 Returns ADREC's current register so VentureOne can diff it against the cap table.
 
 <RequestExample>
+```http Headers (writes)
+Authorization: Bearer <access-token>
+Content-Type: application/json
+Idempotency-Key: vo-bo-3f9c21a7-4b10-4d3a-9e21-7c1b8a5d2f00
+```
+
 ```json POST /beneficial-owners · decrypted
 {
   "offeringReference": "VO-OFF-8842",

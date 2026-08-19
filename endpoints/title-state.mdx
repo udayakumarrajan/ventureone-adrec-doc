@@ -27,6 +27,12 @@ Returns the **authoritative state of the title** at a point in time, signed by A
 
 <Info>Persist `snapshotId` + `signature` against the offering. This is what proves the title state VentureOne relied on when it approved the offering — feeding `assets.registry_validated` and the evidence trail.</Info>
 
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
 <ResponseExample>
 ```json Response · decrypted
 {

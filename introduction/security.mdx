@@ -88,8 +88,16 @@ Webhooks are **always signed** — even when they carry no PII and are therefore
 
 ## Authentication
 
-<Warning>
-  The auth scheme is **not yet finalised**. VentureOne's ADREC client is scaffolding: credentials live in a runtime `integration_configs` store (`provider = "adres"`) holding an API key/secret pair, but the real scheme — bearer token, HMAC signature, or mTLS — is an open item for ADREC to confirm. Treat this section as a proposal.
-</Warning>
+**Every request to ADREC must carry an `Authorization` header** — a bearer access token issued to VentureOne:
 
-Proposed: mutual TLS at the transport layer **plus** a per-request signature (above). Credentials and certificate material are provisioned out-of-band and stored server-side; they are never placed in URLs or query strings.
+```http
+Authorization: Bearer <access-token>
+```
+
+This applies to **all** endpoints — reads and writes alike. Requests are also made over mutual TLS and, for state-changing calls, carry a per-request signature (above). The token is provisioned out-of-band and stored server-side; it is never placed in URLs or query strings.
+
+The `Authorization` header (and, for writes, the [`Idempotency-Key`](/introduction/conventions#idempotency-writes)) is shown in the **Headers** block of each endpoint's request example.
+
+<Warning>
+  The exact token scheme is **not yet finalised**. VentureOne's ADREC client is scaffolding: credentials live in a runtime `integration_configs` store (`provider = "adres"`) holding an API key/secret pair, but whether the final scheme is a bearer token, HMAC signature, or mTLS-only is an open item for ADREC to confirm. The `Authorization: Bearer` header above is the working proposal.
+</Warning>

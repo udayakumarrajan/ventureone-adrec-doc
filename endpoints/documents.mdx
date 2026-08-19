@@ -43,6 +43,12 @@ One endpoint for every registry document tied to a property. Omit `docType` to l
 
 Maps to → `assets.registry_reference` (deed number), and the platform's seeded `asset_documents` of type `title_deed`.
 
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
 <ResponseExample>
 ```json GET …?docType=TITLE_DEED · decrypted
 {

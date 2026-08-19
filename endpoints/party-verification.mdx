@@ -50,6 +50,11 @@ Maps to → `issuers.registration_number`, `issuers.status`, `property_managers.
 | `DEVELOPER` | 23 | `TRADE_LICENSE` | Off-plan / developer offerings |
 
 <RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
 ```json ① Request · encrypted (Content-Type: application/json)
 {
   "payload": "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoiYWRyZWMtMjAyNi0wMSJ9.T8kQx3Rp9mV2LdY6bWc7hJf1aZ5oS9uNqE4rP0iGxB3lKvChZ2wYpN4mLbQ.Hk9sT2wYpN4mLbQ.dF6gH1jK8nR3vX0zC5bM7wQ2eA9tY4uP6sL1oI8kZ7cV.pQ7wZ2mK9nB4xR1tG3yH"

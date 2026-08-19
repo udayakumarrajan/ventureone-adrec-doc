@@ -49,6 +49,12 @@ Lightweight re-check of a single party's licence, polled on a schedule to auto-s
 
 <Info>Prefer the [tenancy/change webhooks](/endpoints/change-webhooks) for real-time licence revocation if ADREC can push it; this poll is the fallback.</Info>
 
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
 <ResponseExample>
 ```json GET /parties/licensed → list
 {
