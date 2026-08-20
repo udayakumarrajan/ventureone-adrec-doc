@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "A",
+  "name": "VentureOne <> ADREC",
   "description": "The property, registry, tenancy, licensing and beneficial-ownership APIs VentureOne requires from ADREC to verify ownership, check eligibility, and tokenize an Abu Dhabi property.",
   "favicon": "/favicon.ico",
   "colors": {
