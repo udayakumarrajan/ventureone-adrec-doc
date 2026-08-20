@@ -1,0 +1,38 @@
+---
+title: "Read Beneficial-Owner Register"
+description: "Read ADREC's current register for an offering to reconcile against the cap table."
+---
+
+<Note>🔒 **Encrypted payload — response.** Returns investor identities → single JWE. Read → only the `Authorization` header is required.</Note>
+
+```http
+GET /beneficial-owners?offeringReference=VO-OFF-8842
+```
+
+Returns ADREC's current beneficial-ownership register for an offering so VentureOne can diff it against the cap table.
+
+| Query param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `offeringReference` | string | **REQUIRED** | The offering whose register to return |
+
+Each item is a [`BeneficialOwner`](/endpoints/beneficial-owners#the-beneficialowner-object).
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response · decrypted
+{
+  "offeringReference": "VO-OFF-8842",
+  "owners": [
+    { "beneficialOwnerId": "BO-2026-770021", "fullNameEn": "Sara Al Mansoori", "holdingPercentage": 2.5, "tokenQuantity": 250 }
+  ],
+  "totalCount": 1,
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

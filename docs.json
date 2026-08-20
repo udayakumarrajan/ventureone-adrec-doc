@@ -76,14 +76,7 @@
               "endpoints/reference-data"
             ]
           },
-          {
-            "group": "Registry & Title Actions",
-            "pages": [
-              "endpoints/fee-quote",
-              "endpoints/registry-transactions",
-              "endpoints/fee-payment"
-            ]
-          },
+          
           {
             "group": "Tenancy & Revenue",
             "pages": [
@@ -95,13 +88,24 @@
           {
             "group": "Beneficial Ownership",
             "pages": [
-              "endpoints/beneficial-owners"
+              "endpoints/beneficial-owners",
+              "endpoints/beneficial-owners-add",
+              "endpoints/beneficial-owners-update",
+              "endpoints/beneficial-owners-remove",
+              "endpoints/beneficial-owners-batch-sync",
+              "endpoints/beneficial-owners-read"
             ]
           },
           {
             "group": "Change Monitoring",
             "pages": [
               "endpoints/change-webhooks"
+            ]
+          },
+          {
+            "group": "Operational",
+            "pages": [
+              "endpoints/operational"
             ]
           },
           {

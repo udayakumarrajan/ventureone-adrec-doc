@@ -46,6 +46,11 @@ GET /property/changes?since=2026-09-01T00:00:00Z&plotIDs=506999,71744
 
 Returns the same event objects that would have been pushed, for all supplied properties changed since `since`. Equivalent per-property signal is also available via [Property Status](/endpoints/property-status) (`lastChangedTimestamp`).
 
+| Query param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `since` | datetime | **REQUIRED** | ISO-8601 lower bound; omitting it is a `422` validation error |
+| `plotIDs` | string | OPTIONAL | Comma-separated plot IDs to filter to; omit for all tokenized properties |
+
 <ResponseExample>
 ```json Webhook event (logical, before encryption)
 {

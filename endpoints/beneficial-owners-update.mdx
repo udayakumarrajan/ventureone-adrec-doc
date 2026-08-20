@@ -1,0 +1,44 @@
+---
+title: "Update Beneficial Owner"
+description: "Adjust a holding after a top-up, partial sale, or secondary-market trade."
+---
+
+<Note>🔒 **Encrypted payload — request & response.** Carries investor identity → single JWE. Write → send an [`Idempotency-Key`](/introduction/conventions#idempotency-writes).</Note>
+
+```http
+PATCH /beneficial-owners/{beneficialOwnerId}
+```
+
+Updates `holdingPercentage` / `tokenQuantity` after a top-up, partial sale, or — if ADREC requires secondary trades to be reported — a secondary-market transfer. Fields follow the shared [`BeneficialOwner` object](/endpoints/beneficial-owners#the-beneficialowner-object); send only the changed fields plus `effectiveDate`.
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+Content-Type: application/json
+Idempotency-Key: vo-bo-4a71c93e-6b20-4e1a-9f32-8d2c9b6e3a11
+```
+
+```json Request · decrypted
+{
+  "holdingPercentage": 3.1,
+  "tokenQuantity": 310,
+  "effectiveDate": "2026-10-01T00:00:00Z"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response · decrypted
+{
+  "beneficialOwnerId": "BO-2026-770021",
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "holdingPercentage": 3.1,
+  "tokenQuantity": 310,
+  "state": "UPDATED",
+  "evidenceRef": "EVD-BO-770044",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

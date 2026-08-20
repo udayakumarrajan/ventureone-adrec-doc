@@ -1,0 +1,56 @@
+---
+title: "Health & Operational"
+description: "Liveness and readiness probes exposed by the service — operational only, not part of the ADREC data contract."
+---
+
+<Note>**TLS only · no authentication.** These endpoints are exempt from the `Authorization` bearer requirement so load balancers and orchestrators can probe them. They carry no personal data.</Note>
+
+These are **operational** endpoints provided by the running service (the mock/regulator integration service), not part of the ADREC business contract. A real ADREC deployment is not expected to expose them; they exist so container orchestration, load balancers, and uptime checks can determine whether the service is alive and ready to serve traffic.
+
+## Liveness
+
+```http
+GET /health
+```
+
+Returns `200` whenever the process is up. Used as a liveness probe — a non-`200` (or no response) signals the orchestrator to restart the instance.
+
+| Field | Type | Use |
+| --- | --- | --- |
+| `status` | string | `"healthy"` |
+| `service` | string | Service name |
+
+<ResponseExample>
+```json GET /health
+{
+  "status": "healthy",
+  "service": "tokenization-regulator-service"
+}
+```
+</ResponseExample>
+
+## Readiness
+
+```http
+GET /ready
+```
+
+Returns `200` when the service is ready to serve requests (dependencies wired). Used as a readiness probe — routing/ingress holds traffic until this passes.
+
+| Field | Type | Use |
+| --- | --- | --- |
+| `status` | string | `"ready"` |
+| `service` | string | Service name |
+| `checks` | object | Per-dependency readiness, e.g. `{ "seed_data": "ok", "callback_client": "ok" }` |
+
+<ResponseExample>
+```json GET /ready
+{
+  "status": "ready",
+  "service": "tokenization-regulator-service",
+  "checks": { "seed_data": "ok", "callback_client": "ok" }
+}
+```
+</ResponseExample>
+
+<Info>The Scalar/OpenAPI reference for the service also serves `/scalar` (API reference), `/docs` (redirects to `/scalar`), and `/openapi.json` — all unauthenticated, none part of the ADREC data contract.</Info>

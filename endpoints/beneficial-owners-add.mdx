@@ -1,0 +1,49 @@
+---
+title: "Add Beneficial Owner"
+description: "Register a new subscriber on ADREC's beneficial-ownership register."
+---
+
+<Note>🔒 **Encrypted payload — request & response.** Carries investor identity → single JWE. Write → send an [`Idempotency-Key`](/introduction/conventions#idempotency-writes).</Note>
+
+```http
+POST /beneficial-owners
+```
+
+Reports a new subscriber when they complete a subscription. Returns the created record with a `beneficialOwnerId`. Fields are defined by the shared [`BeneficialOwner` object](/endpoints/beneficial-owners#the-beneficialowner-object).
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+Content-Type: application/json
+Idempotency-Key: vo-bo-3f9c21a7-4b10-4d3a-9e21-7c1b8a5d2f00
+```
+
+```json Request · decrypted
+{
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "fullNameEn": "Sara Al Mansoori",
+  "email": "sara@example.com",
+  "holdingPercentage": 2.5,
+  "tokenQuantity": 250,
+  "walletAddress": "0x9f…21b",
+  "effectiveDate": "2026-09-01T00:00:00Z"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response · decrypted
+{
+  "beneficialOwnerId": "BO-2026-770021",
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "holdingPercentage": 2.5,
+  "tokenQuantity": 250,
+  "state": "REGISTERED",
+  "evidenceRef": "EVD-BO-770021",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

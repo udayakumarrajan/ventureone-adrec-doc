@@ -1,0 +1,40 @@
+---
+title: "Remove Beneficial Owner"
+description: "Record a full exit from the beneficial-ownership register."
+---
+
+<Note>🔒 **Encrypted payload — request & response.** Carries investor identity → single JWE. Write → send an [`Idempotency-Key`](/introduction/conventions#idempotency-writes).</Note>
+
+```http
+DELETE /beneficial-owners/{beneficialOwnerId}
+```
+
+Records a full exit when an investor sells their entire holding. The body carries `offeringReference`, `plotID`, and `effectiveDate` for the audit trail. A removal of an unknown id returns `404`.
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+Content-Type: application/json
+Idempotency-Key: vo-bo-88c0a12f-7c30-4f2b-9a43-1e3d0c7f4b22
+```
+
+```json Request · decrypted
+{
+  "offeringReference": "VO-OFF-8842",
+  "plotID": 506999,
+  "effectiveDate": "2026-11-01T00:00:00Z"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response · decrypted
+{
+  "beneficialOwnerId": "BO-2026-770021",
+  "state": "DEREGISTERED",
+  "evidenceRef": "EVD-BO-770099",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>
