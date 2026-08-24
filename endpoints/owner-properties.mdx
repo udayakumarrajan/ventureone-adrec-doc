@@ -38,6 +38,7 @@ Each item is **one property**, not one plot. Where a party owns several properti
 | `ownerId` | int | **REQUIRED** | This party's stake on this property — pass as `ownerId` to [Property Details](/endpoints/property-details) |
 | `titleDeedNumber` | string | OPTIONAL | Deed reference for this property — disambiguates rows sharing a `plotID` |
 | `unitNumber`, `buildingNumber` | string | OPTIONAL | Distinguishes properties on the same plot in a pick-list |
+| `buildingNameEn` / `Ar` | string | OPTIONAL | Building name in English / Arabic — the human-readable label for a pick-list, where `buildingNumber` is only a registry code |
 | `ownershipPercentage` | number | **REQUIRED** | Share **of this property**, not of the plot — ownership-proof gate |
 | `ownershipTypeNameEn` / `Ar` | string | **REQUIRED** | Ownership type |
 | `eidNumber` / `licenseNumber` | string | **REQUIRED** | Match to issuer |
@@ -85,6 +86,9 @@ Content-Type: application/json
       "ownerId": 258015,
       "titleDeedNumber": "AD-2024-004411",
       "unitNumber": "101",
+      "buildingNumber": "B-04",
+      "buildingNameEn": "Khalifa City Residences",
+      "buildingNameAr": "مساكن مدينة خليفة",
       "ownershipPercentage": 100,
       "ownershipTypeNameEn": "Ownership",
       "eidNumber": null,
@@ -102,6 +106,9 @@ Content-Type: application/json
       "ownerId": 258015,
       "titleDeedNumber": "AD-2024-004412",
       "unitNumber": "102",
+      "buildingNumber": "B-04",
+      "buildingNameEn": "Khalifa City Residences",
+      "buildingNameAr": "مساكن مدينة خليفة",
       "ownershipPercentage": 60,
       "ownershipTypeNameEn": "Ownership",
       "eidNumber": null,
@@ -119,6 +126,9 @@ Content-Type: application/json
       "ownerId": 258015,
       "titleDeedNumber": "AD-2026-000123",
       "unitNumber": "101",
+      "buildingNumber": "T-1",
+      "buildingNameEn": "Al Nahyan Tower 1",
+      "buildingNameAr": "برج آل نهيان 1",
       "ownershipPercentage": 100,
       "ownershipTypeNameEn": "Ownership",
       "eidNumber": null,
