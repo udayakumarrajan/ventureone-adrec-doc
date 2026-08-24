@@ -6,7 +6,7 @@ description: "Read ADREC's current register for an offering to reconcile against
 <Note>🔒 **Encrypted payload — response.** Returns investor identities → single JWE. Read → only the `Authorization` header is required.</Note>
 
 ```http
-GET /beneficial-owners?offeringReference=VO-OFF-8842
+GET /beneficial-owners?offeringReference=VO-OFF-8842&plotID={plotID}&propertyId={propertyId}
 ```
 
 Returns ADREC's current beneficial-ownership register for an offering so VentureOne can diff it against the cap table.
@@ -14,8 +14,22 @@ Returns ADREC's current beneficial-ownership register for an offering so Venture
 | Query param | Type | Req. | Use |
 | --- | --- | --- | --- |
 | `offeringReference` | string | **REQUIRED** | The offering whose register to return |
+| `plotID` | int | OPTIONAL | Narrow to one plot — only useful with `propertyId` |
+| `propertyId` | int | OPTIONAL | Narrow to the register for a single tokenized property. Omit to return every property backing the offering |
 
-Each item is a [`BeneficialOwner`](/endpoints/beneficial-owners#the-beneficialowner-object).
+<Note>
+  An offering usually backs one property, in which case the filters are unnecessary. Supply the `(plotID, propertyId)` pair when an offering spans several properties and you want to reconcile one of them — the response groups owners by property either way, so a diff never crosses registers.
+</Note>
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `offeringReference` | string | **REQUIRED** | Echoes the request |
+| `registers[]` | object[] | **REQUIRED** | One entry per tokenized property — `{ plotID, propertyId, owners[], totalCount }` |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+Each `owners[]` item is a [`BeneficialOwner`](/endpoints/beneficial-owners#the-beneficialowner-object).
 
 <RequestExample>
 ```http Headers
@@ -27,10 +41,17 @@ Authorization: Bearer <access-token>
 ```json Response · decrypted
 {
   "offeringReference": "VO-OFF-8842",
-  "owners": [
-    { "beneficialOwnerId": "BO-2026-770021", "fullNameEn": "Sara Al Mansoori", "holdingPercentage": 2.5, "tokenQuantity": 250 }
+  "registers": [
+    {
+      "plotID": 506999,
+      "propertyId": 506999002,
+      "owners": [
+        { "beneficialOwnerId": "BO-2026-770021", "fullNameEn": "Sara Al Mansoori", "holdingPercentage": 2.5, "tokenQuantity": 250 },
+        { "beneficialOwnerId": "BO-2026-770022", "fullNameEn": "Omar Trading LLC", "holdingPercentage": 10, "tokenQuantity": 1000 }
+      ],
+      "totalCount": 2
+    }
   ],
-  "totalCount": 1,
   "status": 1,
   "errorCode": 0
 }

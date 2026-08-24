@@ -6,26 +6,37 @@ description: "An authoritative, signed snapshot of the title as it stands — ca
 <Note>🔒 **Encrypted payload — response · always signed.** Carries owner identities and is retained as legal evidence, so the body is a single JWE **and** a JWS/detached signature over the snapshot.</Note>
 
 ```http
-GET /property/title-state/{plotID}
+GET /property/title-state/{plotID}?propertyId={propertyId}
 ```
 
 Returns the **authoritative state of the title** at a point in time, signed by ADREC so VentureOne can retain it as **compliance evidence** for the review record. Unlike [Property Status](/endpoints/property-status), this is expensive and produces a legal artefact — call it once at review, not on a poll.
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyId` | int | **REQUIRED** | The property whose title to snapshot |
+
+<Warning>
+  **`propertyId` is required here.** A signed snapshot is evidence about **one title**. A plot with three units has three deeds and three owner sets — a plot-scoped snapshot would not identify which title VentureOne relied on, which is the entire purpose of retaining it. To evidence several properties, take one snapshot per `propertyId`; each returns its own `snapshotId` and `signature`.
+</Warning>
 
 ## Response
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
-| `plotID` | int | **REQUIRED** | Property key |
-| `titleDeedNumber` | string | **REQUIRED** | Deed reference |
+| `plotID` | int | **REQUIRED** | Parent plot — echoes the request |
+| `propertyId` | int | **REQUIRED** | The property this snapshot evidences — echoes the request |
+| `titleDeedNumber` | string | **REQUIRED** | Deed reference for **this property** |
 | `snapshotId` | string | **REQUIRED** | ADREC's id for this evidence snapshot → `evidence_events.evidence_ref` |
 | `snapshotAt` | datetime | **REQUIRED** | Instant the state was captured |
-| `owners[]` | [Owner](/models/shared-schemas#owner)[] | **REQUIRED** | Authoritative ownership set |
+| `owners[]` | [Owner](/models/shared-schemas#owner)[] | **REQUIRED** | Authoritative ownership set **for this property** — may be several co-owners |
 | `encumbrances[]` | object[] | **REQUIRED** | Active mortgages / charges / blockings at snapshot |
 | `isTradable` / `isSellable` | bool | **REQUIRED** | Eligibility at snapshot |
 | `signature` | string | **REQUIRED** | JWS / detached signature over the snapshot |
 | `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
 
-<Info>Persist `snapshotId` + `signature` against the offering. This is what proves the title state VentureOne relied on when it approved the offering — feeding `assets.registry_validated` and the evidence trail.</Info>
+<Info>Persist `snapshotId` + `signature` against the offering, keyed by `(plotID, propertyId)`. This is what proves the title state VentureOne relied on when it approved the offering — feeding `assets.registry_validated` and the evidence trail.</Info>
 
 <RequestExample>
 ```http Headers
@@ -37,12 +48,15 @@ Authorization: Bearer <access-token>
 ```json Response · decrypted
 {
   "plotID": 506999,
-  "titleDeedNumber": "AD-2026-000123",
+  "propertyId": 506999002,
+  "titleDeedNumber": "AD-2026-000124",
   "snapshotId": "TS-2026-0091422",
   "snapshotAt": "2026-08-15T10:00:00Z",
   "owners": [
-    { "ownerId": 258015, "ownerNameEn": "Issuer Holding LLC", "ownerShare": 100,
-      "ownershipMethodEn": "Freehold", "ownerType": 2, "licenseNumber": "CN-1298819" }
+    { "ownerId": 258015, "ownerNameEn": "Issuer Holding LLC", "ownerShare": 60,
+      "ownershipMethodEn": "Freehold", "ownerType": 2, "licenseNumber": "CN-1298819" },
+    { "ownerId": 301882, "ownerNameEn": "Mariam Al Suwaidi", "ownerShare": 40,
+      "ownershipMethodEn": "Freehold", "ownerType": 1, "eidNumber": "784-XXXX-XXXXXXX-X" }
   ],
   "encumbrances": [
     { "type": "MORTGAGE", "contractNumber": "20260000158518", "amount": 40000, "isActive": true }

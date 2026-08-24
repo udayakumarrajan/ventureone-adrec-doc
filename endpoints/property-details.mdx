@@ -6,23 +6,40 @@ description: "The canonical property record — attributes, ownership, encumbran
 <Note>🔒 **Encrypted payload — response.** Contains owner identities (`ownerships[]`, `eidNumber`). Encrypt the whole body; or, if preferred, encrypt only the `ownerships[]` section per the [granularity rule](/introduction/security#granularity-whole-payload-by-default).</Note>
 
 ```http
-GET /property/details/{plotID}
+GET /property/details/{plotID}?propertyId={propertyId}&ownerId={ownerID}&pageNumber=1&pageSize=20
 ```
 
-The core record for a property. It is deliberately broad: it carries the attributes, ownership, encumbrances, eligibility, zoning and tenancy flags in one call
+The core record for a property. It is deliberately broad: it carries the attributes, ownership, encumbrances, eligibility, zoning and tenancy flags in one call.
+
+**This endpoint is also the plot → properties resolver.** A plot can hold many separately registrable properties, so `propertyDetails[]` returns **one item per property** on the plot — each with its own `propertyId`, deed, area and `ownerships[]`. Narrow the set with `propertyId` (one property) or `ownerId` (only the properties a given party owns). See [Identifiers](/introduction/conventions#identifiers-plot-property-owner).
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | The plot to resolve |
+| `propertyId` | int | OPTIONAL | Narrow to a single property on that plot. Omit to return **every** property on the plot |
+| `ownerId` | int | OPTIONAL | Return only the properties this party owns — use the `ownerId` from [Owner Properties](/endpoints/owner-properties) |
+| `pageNumber` / `pageSize` | int | OPTIONAL | [Pagination](/introduction/conventions#pagination) — pages over `propertyDetails[]` |
+
+<Note>
+  `propertyId` is passed **alongside** `plotID`, never on its own — its uniqueness scope is [unconfirmed](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec). Every other property-scoped endpoint takes the same `(plotID, propertyId)` pair.
+</Note>
 
 ## Response (root)
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
-| `propertyDetails[]` | Property[] | **REQUIRED** | The property record — item fields below |
+| `propertyDetails[]` | Property[] | **REQUIRED** | **One item per property** on the plot — item fields below |
+| `totalCount` | int | **REQUIRED** | Number of properties matching the filter |
 | `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
 
 ### `Property` — identifiers & registration
 
 | Field | Type | Req. | Maps to / use |
 | --- | --- | --- | --- |
-| `propertyId` | int | **REQUIRED** | `assets.registry_reference` |
+| `plotID` | int | **REQUIRED** | The parent plot — echoes the request |
+| `propertyId` | int | **REQUIRED** | This property's key. Pair with `plotID` for every downstream call → `assets.registry_reference` |
 | `titleDeedNumber` | string | **REQUIRED** | Deed reference |
 | `unitRegistrationNumber` | string | CONDITIONAL | Unit-level tokenization |
 | `plotNumber`, `buildingNumber`, `unitNumber` | string | OPTIONAL | Address / reference |
@@ -80,12 +97,14 @@ Authorization: Bearer <access-token>
 </RequestExample>
 
 <ResponseExample>
-```json Response · decrypted
+```json Response · decrypted — plot with two properties
 {
   "propertyDetails": [
     {
-      "propertyId": 506999,
+      "plotID": 506999,
+      "propertyId": 506999001,
       "titleDeedNumber": "AD-2026-000123",
+      "unitNumber": "101",
       "district": { "lookupId": 2511, "constant": "AL_NAHYAN", "lookupNameEn": "Al Nahyan", "lookupNameAr": "آل نهيان" },
       "community": { "lookupId": 1311, "constant": "E19_02", "lookupNameEn": "E19_02", "lookupNameAr": "شرق 19_2" },
       "xCoordinate": 54.38805,
@@ -117,11 +136,54 @@ Authorization: Bearer <access-token>
       "isRentable": true,
       "isOffPlan": false,
       "isRented": false
+    },
+    {
+      "plotID": 506999,
+      "propertyId": 506999002,
+      "titleDeedNumber": "AD-2026-000124",
+      "unitNumber": "102",
+      "district": { "lookupId": 2511, "constant": "AL_NAHYAN", "lookupNameEn": "Al Nahyan", "lookupNameAr": "آل نهيان" },
+      "community": { "lookupId": 1311, "constant": "E19_02", "lookupNameEn": "E19_02", "lookupNameAr": "شرق 19_2" },
+      "xCoordinate": 54.38811,
+      "yCoordinate": 24.47679,
+      "propertyType": { "lookupId": 1, "constant": "UNIT", "lookupNameEn": "Unit", "lookupNameAr": "وحدة" },
+      "propertyClassification": { "lookupId": 1039, "constant": "TOWNHOUSE", "lookupNameEn": "Townhouse", "lookupNameAr": "تاون هاوس" },
+      "plotArea": 1837.5,
+      "unitArea": 198.0,
+      "ownerships": [
+        { "ownerId": 258015, "ownerNameEn": "Issuer Holding LLC", "ownerShare": 60,
+          "ownershipMethodEn": "Freehold", "ownerType": 2, "eidNumber": null, "licenseNumber": "CN-1298819" },
+        { "ownerId": 301882, "ownerNameEn": "Mariam Al Suwaidi", "ownerShare": 40,
+          "ownershipMethodEn": "Freehold", "ownerType": 1, "eidNumber": "784-XXXX-XXXXXXX-X", "licenseNumber": null }
+      ],
+      "isMortgaged": false,
+      "mortgages": [],
+      "blockings": [],
+      "endowmentContracts": [],
+      "isTradable": true,
+      "isSellable": true,
+      "isRentable": true,
+      "isOffPlan": false,
+      "isRented": true
     }
   ],
+  "totalCount": 2,
   "status": 1,
   "responseMessage": "Success",
   "errorCode": 0
 }
 ```
+
+```json …&propertyId=506999001 · narrowed to one property
+{
+  "propertyDetails": [
+    { "plotID": 506999, "propertyId": 506999001, "titleDeedNumber": "AD-2026-000123", "unitNumber": "101" }
+  ],
+  "totalCount": 1,
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+
 </ResponseExample>

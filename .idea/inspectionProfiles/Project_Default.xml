@@ -1,0 +1,29 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="bcrypt" />
+          <option value="boto3" />
+          <option value="email-validator" />
+          <option value="fastapi" />
+          <option value="httpx" />
+          <option value="psycopg2-binary" />
+          <option value="pydantic" />
+          <option value="pydantic-settings" />
+          <option value="pyotp" />
+          <option value="python-jose" />
+          <option value="python-multipart" />
+          <option value="redis" />
+          <option value="reportlab" />
+          <option value="sqlalchemy" />
+          <option value="sse-starlette" />
+          <option value="tokenization-observability" />
+          <option value="uvicorn" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

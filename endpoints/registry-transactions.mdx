@@ -18,10 +18,17 @@ One endpoint for every mutation of a title record, selected by `transactionType`
 | Field | Type | Req. | Values / use |
 | --- | --- | --- | --- |
 | `transactionType` | enum | **REQUIRED** | `TITLE_TRANSFER` · `TOKENIZATION_ANNOTATION` · `CHARGE_REGISTRATION` · `ANNOTATION_RELEASE` |
-| `plotID` | int | **REQUIRED** | Target property |
+| `plotID` | int | **REQUIRED** | Parent plot of the target property |
+| `propertyId` | int | **REQUIRED** | The property whose title is being mutated |
 | `reference` | string | **REQUIRED** | VentureOne offering reference (e.g. `VO-OFF-8842`) |
 | `quoteId` | string | CONDITIONAL | Fee quote from [Fee Quote](/endpoints/fee-quote) — required when the type incurs a fee |
 | `effectiveDate` | date | OPTIONAL | ISO-8601 |
+
+<Warning>
+  **`propertyId` is required for every `transactionType`.** These calls mutate a title, and a plot with several properties has several titles. Transferring or annotating "the plot" would move or encumber properties the offering has nothing to do with — including other parties' units. ADREC should reject a request carrying only `plotID` on a multi-property plot rather than infer a target.
+
+  The `propertyId` must match the one on the `quoteId` from [Fee Quote](/endpoints/fee-quote). Where a transaction genuinely covers the whole plot, send one transaction per `propertyId` so each title gets its own `transactionRef` and evidence record.
+</Warning>
 
 ### Type-specific blocks
 
@@ -31,7 +38,7 @@ One endpoint for every mutation of a title record, selected by `transactionType`
     | --- | --- | --- | --- |
     | `fromParty` | Party | **REQUIRED** | Current owner (issuer) — PII |
     | `toParty` | Party | **REQUIRED** | SPV becoming legal owner — PII |
-    | `sharePercentage` | number | **REQUIRED** | Share transferred (usually `100`) |
+    | `sharePercentage` | number | **REQUIRED** | Share **of this property** transferred (usually `100`). Where the issuer is a co-owner, this is their share, not the whole title |
     | `considerationAmount` | number | **REQUIRED** | Transfer value |
 
     Returns `titleRegistrationRef` → the SPV's new title. Feeds `asset_structurings.spv_registration_reference`.
@@ -67,6 +74,7 @@ One endpoint for every mutation of a title record, selected by `transactionType`
 | --- | --- | --- | --- |
 | `transactionRef` | string | **REQUIRED** | ADREC's id for this transaction |
 | `transactionType` | enum | **REQUIRED** | Echoes the request |
+| `plotID` / `propertyId` | int | **REQUIRED** | Echoes the mutated title — reconcile against the request before persisting |
 | `state` | enum | **REQUIRED** | `PENDING` · `AWAITING_FEE` · `COMPLETED` · `REJECTED` |
 | `titleRegistrationRef` | string | CONDITIONAL | `TITLE_TRANSFER` result |
 | `annotationId` | string | CONDITIONAL | `TOKENIZATION_ANNOTATION` result |
@@ -87,6 +95,7 @@ Idempotency-Key: vo-txn-9f2c1a7e-4b10-4d3a-9e21-7c1b8a5d2f00
 {
   "transactionType": "TITLE_TRANSFER",
   "plotID": 506999,
+  "propertyId": 506999002,
   "reference": "VO-OFF-8842",
   "quoteId": "FQ-2026-771201",
   "fromParty": { "type": "ENTITY", "nameEn": "Issuer Holding LLC", "licenseNumber": "CN-1298819" },
@@ -100,6 +109,7 @@ Idempotency-Key: vo-txn-9f2c1a7e-4b10-4d3a-9e21-7c1b8a5d2f00
 {
   "transactionType": "TOKENIZATION_ANNOTATION",
   "plotID": 506999,
+  "propertyId": 506999002,
   "reference": "VO-OFF-8842",
   "action": "SET"
 }
@@ -111,6 +121,8 @@ Idempotency-Key: vo-txn-9f2c1a7e-4b10-4d3a-9e21-7c1b8a5d2f00
 {
   "transactionRef": "RTX-2026-0044120",
   "transactionType": "TITLE_TRANSFER",
+  "plotID": 506999,
+  "propertyId": 506999002,
   "state": "AWAITING_FEE",
   "titleRegistrationRef": null,
   "feeDue": { "quoteId": "FQ-2026-771201", "totalAmount": 56000, "currency": "AED" },
@@ -125,6 +137,8 @@ Idempotency-Key: vo-txn-9f2c1a7e-4b10-4d3a-9e21-7c1b8a5d2f00
 {
   "transactionRef": "RTX-2026-0044121",
   "transactionType": "TOKENIZATION_ANNOTATION",
+  "plotID": 506999,
+  "propertyId": 506999002,
   "state": "COMPLETED",
   "annotationId": "ANN-556677",
   "evidenceRef": "EVD-RTX-0044121",

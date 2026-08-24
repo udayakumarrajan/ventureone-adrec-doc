@@ -14,8 +14,13 @@ Bulk upsert of the **entire** register for an offering — the periodic reconcil
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
 | `offeringReference` | string | **REQUIRED** | Register scope |
-| `plotID` | int | **REQUIRED** | Property |
+| `plotID` | int | **REQUIRED** | Parent plot |
+| `propertyId` | int | **REQUIRED** | The tokenized property whose register is being replaced |
 | `owners[]` | [BeneficialOwner](/endpoints/beneficial-owners#the-beneficialowner-object)[] | **REQUIRED** | Full authoritative set — ADREC replaces the register with this |
+
+<Warning>
+  **The replace is scoped to `(offeringReference, plotID, propertyId)` — never to `plotID` alone.** This is a destructive operation: if ADREC scoped it to the plot, syncing unit 102's register would wipe the register of every other tokenized unit on the same plot. Sync each property separately.
+</Warning>
 
 <RequestExample>
 ```http Headers
@@ -28,6 +33,7 @@ Idempotency-Key: vo-bo-sync-2f19a7c4-9d40-4a3c-8b52-6f1e2d9c3a44
 {
   "offeringReference": "VO-OFF-8842",
   "plotID": 506999,
+  "propertyId": 506999002,
   "owners": [
     { "fullNameEn": "Sara Al Mansoori", "holdingPercentage": 2.5, "tokenQuantity": 250, "effectiveDate": "2026-09-01T00:00:00Z" },
     { "fullNameEn": "Omar Trading LLC", "holdingPercentage": 10, "tokenQuantity": 1000, "effectiveDate": "2026-09-03T00:00:00Z" }
@@ -41,6 +47,7 @@ Idempotency-Key: vo-bo-sync-2f19a7c4-9d40-4a3c-8b52-6f1e2d9c3a44
 {
   "offeringReference": "VO-OFF-8842",
   "plotID": 506999,
+  "propertyId": 506999002,
   "registeredCount": 2,
   "state": "SYNCED",
   "evidenceRef": "EVD-BO-SYNC-5521",

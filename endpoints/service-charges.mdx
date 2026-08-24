@@ -6,23 +6,42 @@ description: "Community / service-charge status for net-income modelling."
 <Note>**TLS only.** Property-level financial data — no personal data.</Note>
 
 ```http
-GET /property/service-charges/{plotID}
+GET /property/service-charges/{plotID}?propertyId={propertyId}
 ```
 
 Returns the service-charge / community-fee position for a property, an input to net-distributable-income modelling. Feeds the platform's `property_revenue_reports.service_charges`.
 
-## Response
+Service charges are levied **per property** — they scale with unit area, and arrears sit against the individual owner, not the plot. Omit `propertyId` to return the position for every property on the plot.
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyId` | int | OPTIONAL | Narrow to one property. Omit for **every** property on the plot |
+
+## Response (root)
 
 | Field | Type | Req. | Maps to / use |
 | --- | --- | --- | --- |
-| `plotID` | int | **REQUIRED** | Property key |
-| `annualServiceCharge` | number | **REQUIRED** | Annual community/service fee |
+| `plotID` | int | **REQUIRED** | Echoes the request |
+| `properties[]` | ServiceCharge[] | **REQUIRED** | One item per property in scope — item fields below |
+| `managementCompanyEn` | string | OPTIONAL | OA / management company — usually plot- or building-level |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### `ServiceCharge` item
+
+| Field | Type | Req. | Maps to / use |
+| --- | --- | --- | --- |
+| `propertyId` | int | **REQUIRED** | Which property this charge applies to |
+| `annualServiceCharge` | number | **REQUIRED** | Annual community/service fee → `property_revenue_reports.service_charges` |
 | `ratePerSqm` | number | OPTIONAL | Basis of the charge |
 | `currency` | string | **REQUIRED** | `AED` |
-| `managementCompanyEn` | string | OPTIONAL | OA / management company |
-| `outstandingBalance` | number | **REQUIRED** | Arrears → net-income risk |
+| `outstandingBalance` | number | **REQUIRED** | Arrears → net-income risk. **Per property** — one unit in arrears does not encumber its neighbours |
 | `paidUntil` | date | OPTIONAL | Coverage period |
-| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<Warning>
+  Do not model `outstandingBalance` at plot level. Arrears follow the property's owner, and an offering must only be charged for the property it actually holds.
+</Warning>
 
 <RequestExample>
 ```http Headers
@@ -34,14 +53,28 @@ Authorization: Bearer <access-token>
 ```json Response
 {
   "plotID": 506999,
-  "annualServiceCharge": 22000,
-  "ratePerSqm": 104.6,
-  "currency": "AED",
   "managementCompanyEn": "SE16 Owners Association",
-  "outstandingBalance": 0,
-  "paidUntil": "2026-12-31T00:00:00Z",
+  "properties": [
+    {
+      "propertyId": 506999001,
+      "annualServiceCharge": 22000,
+      "ratePerSqm": 104.6,
+      "currency": "AED",
+      "outstandingBalance": 0,
+      "paidUntil": "2026-12-31T00:00:00Z"
+    },
+    {
+      "propertyId": 506999002,
+      "annualServiceCharge": 20700,
+      "ratePerSqm": 104.6,
+      "currency": "AED",
+      "outstandingBalance": 5175,
+      "paidUntil": "2026-09-30T00:00:00Z"
+    }
+  ],
   "status": 1,
   "errorCode": 0
 }
 ```
+
 </ResponseExample>

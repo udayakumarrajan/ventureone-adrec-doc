@@ -6,26 +6,46 @@ description: "A cheap freshness re-check — has anything material changed since
 <Note>**TLS only.** Returns change flags and timestamps, no personal data.</Note>
 
 ```http
-GET /property/status/{plotID}
+GET /property/status/{plotID}?propertyId={propertyId}
 ```
 
 A lightweight poll used at **draft time** to confirm ownership and status are unchanged since the property record was pulled. It is intentionally cheap so it can run frequently — for the signed, legal snapshot used as compliance evidence, use [Title State](/endpoints/title-state) instead.
 
-## Response
+Status is tracked **per property**, not per plot: two units on one plot can change independently. Omit `propertyId` to poll every property on the plot in a single call — the usual pattern, since it costs one request to watch a whole portfolio parcel.
+
+## Query parameters
+
+<ParamField query="propertyId" type="integer">
+  A property on this plot, from [Property Details](/endpoints/property-details). Omit to return one status item per property.
+</ParamField>
+<ParamField query="since" type="datetime">
+  If supplied, `changedSections[]` lists only the areas that changed after this instant.
+</ParamField>
+
+## Response (root)
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
 | `plotID` | int | **REQUIRED** | Echoes the request |
+| `properties[]` | PropertyStatus[] | **REQUIRED** | One item per property in scope — item fields below |
+| `plotLastChangedTimestamp` | datetime | **REQUIRED** | Most recent change across **any** property on the plot — cheap single-value poll |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### `PropertyStatus` item
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyId` | int | **REQUIRED** | Which property this status describes |
 | `lastChangedTimestamp` | datetime | **REQUIRED** | Diff against the timestamp captured at last read |
-| `ownershipHash` | string | **REQUIRED** | Stable digest of the ownership set — changed ⇒ ownership moved |
+| `ownershipHash` | string | **REQUIRED** | Stable digest of **this property's** ownership set — changed ⇒ ownership moved |
 | `isMortgaged` | bool | **REQUIRED** | Fast encumbrance flag |
 | `isBlocked` | bool | **REQUIRED** | Fast legal-block flag |
 | `isTradable` / `isSellable` | bool | **REQUIRED** | Eligibility still holds |
 | `changedSections[]` | enum[] | OPTIONAL | `OWNERSHIP` · `MORTGAGE` · `BLOCKING` · `TENANCY` since a supplied `since` |
 
-<ParamField query="since" type="datetime">
-  If supplied, `changedSections[]` lists only the areas that changed after this instant.
-</ParamField>
+<Warning>
+  Hash the ownership set **per property**. A plot-level `ownershipHash` would flip whenever any co-owner of any unit changed, forcing VentureOne to re-read every property on the plot to find out whether its own offering was affected.
+</Warning>
 
 <RequestExample>
 ```http Headers
@@ -37,15 +57,32 @@ Authorization: Bearer <access-token>
 ```json Response
 {
   "plotID": 506999,
-  "lastChangedTimestamp": "2026-08-14T06:20:00Z",
-  "ownershipHash": "sha256:9f2c…a71b",
-  "isMortgaged": true,
-  "isBlocked": false,
-  "isTradable": true,
-  "isSellable": true,
-  "changedSections": ["MORTGAGE"],
+  "plotLastChangedTimestamp": "2026-08-14T06:20:00Z",
+  "properties": [
+    {
+      "propertyId": 506999001,
+      "lastChangedTimestamp": "2026-08-14T06:20:00Z",
+      "ownershipHash": "sha256:9f2c…a71b",
+      "isMortgaged": true,
+      "isBlocked": false,
+      "isTradable": true,
+      "isSellable": true,
+      "changedSections": ["MORTGAGE"]
+    },
+    {
+      "propertyId": 506999002,
+      "lastChangedTimestamp": "2026-06-02T11:04:00Z",
+      "ownershipHash": "sha256:41ba…c907",
+      "isMortgaged": false,
+      "isBlocked": false,
+      "isTradable": true,
+      "isSellable": true,
+      "changedSections": []
+    }
+  ],
   "status": 1,
   "errorCode": 0
 }
 ```
+
 </ResponseExample>

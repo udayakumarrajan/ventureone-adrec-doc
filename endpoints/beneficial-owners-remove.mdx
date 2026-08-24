@@ -9,7 +9,7 @@ description: "Record a full exit from the beneficial-ownership register."
 DELETE /beneficial-owners/{beneficialOwnerId}
 ```
 
-Records a full exit when an investor sells their entire holding. The body carries `offeringReference`, `plotID`, and `effectiveDate` for the audit trail. A removal of an unknown id returns `404`.
+Records a full exit when an investor sells their entire holding. The body carries `offeringReference`, the `(plotID, propertyId)` pair, and `effectiveDate` for the audit trail — naming the property makes the removal unambiguous when one plot backs several offerings. A removal of an unknown id returns `404`.
 
 <RequestExample>
 ```http Headers
@@ -22,6 +22,7 @@ Idempotency-Key: vo-bo-88c0a12f-7c30-4f2b-9a43-1e3d0c7f4b22
 {
   "offeringReference": "VO-OFF-8842",
   "plotID": 506999,
+  "propertyId": 506999002,
   "effectiveDate": "2026-11-01T00:00:00Z"
 }
 ```
@@ -31,6 +32,8 @@ Idempotency-Key: vo-bo-88c0a12f-7c30-4f2b-9a43-1e3d0c7f4b22
 ```json Response · decrypted
 {
   "beneficialOwnerId": "BO-2026-770021",
+  "plotID": 506999,
+  "propertyId": 506999002,
   "state": "DEREGISTERED",
   "evidenceRef": "EVD-BO-770099",
   "status": 1,

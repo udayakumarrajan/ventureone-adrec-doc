@@ -43,6 +43,44 @@ Any classification field (property type, ownership method, district…) is retur
 
 In the endpoint tables these fields are typed `object` (a single coded value) or `object[]` (a list of them). Match on `constant`, never on the display label. Resolve the full set of possible values via [Reference Data](/endpoints/reference-data).
 
+## Identifiers — plot, property, owner
+
+A **plot is not a property.** One plot can carry many separately registrable properties (units, villas, floors), and each of those can have many owners. Three identifiers follow from that, and the distinction matters because tokenization happens at the *property* level, not the plot level.
+
+| Identifier | Identifies | Cardinality |
+| --- | --- | --- |
+| `plotID` | The land parcel as registered by ADREC | 1 plot → **many** properties |
+| `propertyId` | A distinct registrable property within a plot — a unit, villa, or the whole plot where it is undivided | 1 property → **many** owners |
+| `ownerId` | One party's ownership stake on one property | — |
+
+<Warning>
+  **`plotID` alone does not identify a tokenizable asset.** A `plotID` selects a *scope* — potentially several properties with different owners, deeds, valuations and tenancy. Anything that attaches to a single title — a signed title snapshot, a valuation, a transfer, a beneficial-owner register — must be addressed by `propertyId`.
+</Warning>
+
+### The `(plotID, propertyId)` pair
+
+Whether `propertyId` is unique **across** the registry or only **within** its plot is [an open item with ADREC](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec). Until that is confirmed, the contract is safe under either answer:
+
+- **Callers send the pair.** Property-scoped calls carry `plotID` (path) *and* `propertyId` (query or body). Never `propertyId` on its own.
+- **Responses echo the pair.** Every property-scoped response returns both `plotID` and `propertyId`, so a caller can always re-address the record it just read.
+
+Omitting `propertyId` where the endpoint allows it widens the call to **plot scope** — the response then covers every property on the plot. Where a plot-wide answer would be meaningless, `propertyId` is marked **REQUIRED** on that endpoint.
+
+<Info>
+  If ADREC confirms `propertyId` is globally unique, a `/{propertyId}` shorthand path can be added later without breaking the pair form documented here.
+</Info>
+
+### Resolving a plot's properties
+
+[Property Details](/endpoints/property-details) is the resolver. `GET /property/details?plotID={plotID}` returns `propertyDetails[]` — one item per property on the plot, each with its `propertyId` and its own `ownerships[]`. Add `&ownerId=` to return only the properties a given party owns.
+
+```
+plotID 506999
+├── propertyId 506999001  ownerships[] → Issuer Holding LLC (100%)
+├── propertyId 506999002  ownerships[] → A (60%), B (40%)
+└── propertyId 506999003  ownerships[] → Al Reem Developments LLC (100%)
+```
+
 ## Units, coordinates & dates
 
 | Topic | Requirement |
@@ -52,7 +90,7 @@ In the endpoint tables these fields are typed `object` (a single coded value) or
 | **Currency** | ISO 4217 codes; amounts as JSON numbers. Registry money is `AED`. |
 | **Dates** | ISO-8601 with timezone — `2026-06-10T00:00:00Z`. No bare dates. |
 | **Booleans** | Real JSON `true`/`false`, not `1`/`0` or `"Y"`. |
-| **Identifiers** | Stable across calls. `plotID` / `propertyId` is the join key between endpoints. |
+| **Identifiers** | Stable across calls. See [Identifiers](#identifiers-plot-property-owner) below for the plot / property / owner hierarchy. |
 
 ## Pagination
 

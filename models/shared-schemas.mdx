@@ -11,11 +11,13 @@ description: "Reusable objects referenced across endpoints — Owner, Party, Mor
 
 Ownership record on a property (see [Property Details](/endpoints/property-details), [Title State](/endpoints/title-state)).
 
+One property can have several owners, and owners differ between properties on the same plot — so an `Owner` is always read in the context of a `propertyId`. See [Identifiers](/introduction/conventions#identifiers-plot-property-owner).
+
 | Field | Type | Req. | Notes |
 | --- | --- | --- | --- |
-| `ownerId` | int | **REQUIRED** | Registry owner id |
+| `ownerId` | int | **REQUIRED** | Registry owner id — this party's stake on **one** property. Pass to [Property Details](/endpoints/property-details) as `ownerId` |
 | `ownerNameEn` / `Ar` | string | **REQUIRED** | Owner identity (PII) |
-| `ownerShare` | number | **REQUIRED** | Percentage held |
+| `ownerShare` | number | **REQUIRED** | Percentage held **of this property**, never of the plot. Shares within one property sum to 100 |
 | `ownershipMethodEn` / `Ar` | string | **REQUIRED** | Freehold / Musataha / Usufruct / Grant |
 | `ownerType` | int | **REQUIRED** | Individual / company / government |
 | `eidNumber` | string | CONDITIONAL | Individuals (PII) |

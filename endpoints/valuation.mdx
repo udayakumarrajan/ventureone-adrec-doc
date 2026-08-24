@@ -6,15 +6,26 @@ description: "The official property valuation — a numeric offering input plus 
 <Note>**TLS only.** Valuation amount, valuer licence and certificate — no natural-person PII.</Note>
 
 ```http
-GET /property/valuation/{plotID}
+GET /property/valuation/{plotID}?propertyId={propertyId}
 ```
 
 Returns the official valuation record for a property. Kept as its own endpoint — rather than a [document](/endpoints/documents) type — because `valuationAmount` is a **required numeric input** to the offering, not just a file.
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyId` | int | **REQUIRED** | The property being valued |
+
+<Warning>
+  **`propertyId` is required here.** Units on the same plot are valued separately — a two-bedroom and a four-bedroom in one building do not share a `valuationAmount`. Returning a plot-level figure would silently overstate `offerings.total_asset_value` for a single-unit offering.
+</Warning>
 
 ## Response
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
+| `plotID` / `propertyId` | int | **REQUIRED** | Echoes the request — the valued property |
 | `valuationAmount` | number | **REQUIRED** | Offering valuation input → `offerings.total_asset_value` |
 | `currency` | string | **REQUIRED** | `AED` |
 | `valuationDate` | date | **REQUIRED** | Certificate issue date |
@@ -33,6 +44,8 @@ Authorization: Bearer <access-token>
 <ResponseExample>
 ```json Response
 {
+  "plotID": 506999,
+  "propertyId": 506999002,
   "valuationAmount": 2750000,
   "currency": "AED",
   "valuationDate": "2026-07-01T00:00:00Z",

@@ -21,7 +21,8 @@ Shared by every operation on this resource.
 | --- | --- | --- | --- | --- |
 | `beneficialOwnerId` | string | CONDITIONAL | — | ADREC's id (absent on create) |
 | `offeringReference` | string | **REQUIRED** | — | `VO-OFF-…` → the SPV/deed the register attaches to |
-| `plotID` | int | **REQUIRED** | — | The tokenized property |
+| `plotID` | int | **REQUIRED** | — | Parent plot of the tokenized property |
+| `propertyId` | int | **REQUIRED** | — | **The tokenized property.** The register attaches to this title, not the plot |
 | `fullNameEn` | string | **REQUIRED** | ✅ | `investors.full_name` |
 | `email` | string | OPTIONAL | ✅ | `investors.email` |
 | `nationality` | string | OPTIONAL | ✅ | If ADREC requires it |
@@ -29,6 +30,10 @@ Shared by every operation on this resource.
 | `tokenQuantity` | number | **REQUIRED** | — | `subscriptions.token_quantity` |
 | `walletAddress` | string | OPTIONAL | — | `investors.wallet_address` |
 | `effectiveDate` | date | **REQUIRED** | — | When the holding took effect |
+
+<Warning>
+  **`propertyId` is required on every operation.** A register records who beneficially owns *one* property. A plot with several units can carry several independent offerings, each with its own cap table — keying the register on `plotID` alone would merge them, and a batch sync would then delete the other offerings' owners. Where an offering is genuinely backed by several properties, submit one register per `(plotID, propertyId)` pair under the same `offeringReference`.
+</Warning>
 
 ## Operations
 

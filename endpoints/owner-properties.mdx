@@ -9,7 +9,9 @@ description: "Resolve the properties owned by a verified identity — the entry 
 POST /property/owner-properties
 ```
 
-Returns the properties owned by an identity — the first call after the issuer is verified. 
+Returns the properties owned by an identity — the first call after the issuer is verified.
+
+Each item is **one property**, not one plot. Where a party owns several properties on the same plot, the same `plotID` appears on several rows, each with its own `propertyId` and `ownershipPercentage`. Use the `(plotID, propertyId)` pair from the row you pick for every subsequent call — see [Identifiers](/introduction/conventions#identifiers-plot-property-owner).
 
 ## Request body
 
@@ -23,7 +25,7 @@ Returns the properties owned by an identity — the first call after the issuer 
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
-| `properties[]` | Property[] | **REQUIRED** | Owned plots — item fields below |
+| `properties[]` | Property[] | **REQUIRED** | Owned **properties** — one row per property, item fields below |
 | `totalCount` | int | **REQUIRED** | Pagination total |
 | `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
 
@@ -31,13 +33,25 @@ Returns the properties owned by an identity — the first call after the issuer 
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
-| `plotID` | int | **REQUIRED** | Key for [Property Details](/endpoints/property-details) |
-| `ownershipPercentage` | number | **REQUIRED** | Ownership-proof gate |
+| `plotID` | int | **REQUIRED** | The parent plot. **Repeats** across rows when the party owns several properties on it |
+| `propertyId` | int | **REQUIRED** | The owned property. Pair with `plotID` for [Property Details](/endpoints/property-details) and every downstream call |
+| `ownerId` | int | **REQUIRED** | This party's stake on this property — pass as `ownerId` to [Property Details](/endpoints/property-details) |
+| `titleDeedNumber` | string | OPTIONAL | Deed reference for this property — disambiguates rows sharing a `plotID` |
+| `unitNumber`, `buildingNumber` | string | OPTIONAL | Distinguishes properties on the same plot in a pick-list |
+| `ownershipPercentage` | number | **REQUIRED** | Share **of this property**, not of the plot — ownership-proof gate |
 | `ownershipTypeNameEn` / `Ar` | string | **REQUIRED** | Ownership type |
 | `eidNumber` / `licenseNumber` | string | **REQUIRED** | Match to issuer |
 | `ownerNameEn` / `Ar` | string | **REQUIRED** | Owner identity |
 | `plotAddress`, `districtNameEn`, `communityNameEn` | string | OPTIONAL | Pick-list display |
-| `isBlocked`, `isMortgaged` | bool | OPTIONAL | Early pre-filter |
+| `isBlocked`, `isMortgaged` | bool | OPTIONAL | Early pre-filter — **per property** |
+
+<Warning>
+  `ownershipPercentage` is the share of the **property**, never of the plot. A party owning 100% of one unit on a four-unit plot is `100` here, not `25`. Reading it as a plot share would fail the ownership-proof gate for a legitimate issuer.
+</Warning>
+
+<Note>
+  `totalCount` counts **properties**, so it can exceed the number of distinct plots. Paginate and display on the property row — a pick-list keyed on `plotID` alone would collapse distinct assets into one entry.
+</Note>
 
 <RequestExample>
 ```http Headers
@@ -62,27 +76,66 @@ Content-Type: application/json
 </RequestExample>
 
 <ResponseExample>
-```json Response · decrypted
+```json Response · decrypted — two properties on one plot, plus one on another
 {
   "properties": [
     {
       "plotID": 71744,
+      "propertyId": 71744001,
+      "ownerId": 258015,
+      "titleDeedNumber": "AD-2024-004411",
+      "unitNumber": "101",
       "ownershipPercentage": 100,
       "ownershipTypeNameEn": "Ownership",
-      "eidNumber": "784-XXXX-XXXXXXX-X",
-      "licenseNumber": null,
+      "eidNumber": null,
+      "licenseNumber": "CN-1298819",
       "ownerNameEn": "Issuer Holding LLC",
       "plotAddress": "2-137-0-23",
       "districtNameEn": "Khalifa City",
       "communityNameEn": "SE16",
       "isBlocked": false,
       "isMortgaged": false
+    },
+    {
+      "plotID": 71744,
+      "propertyId": 71744002,
+      "ownerId": 258015,
+      "titleDeedNumber": "AD-2024-004412",
+      "unitNumber": "102",
+      "ownershipPercentage": 60,
+      "ownershipTypeNameEn": "Ownership",
+      "eidNumber": null,
+      "licenseNumber": "CN-1298819",
+      "ownerNameEn": "Issuer Holding LLC",
+      "plotAddress": "2-137-0-23",
+      "districtNameEn": "Khalifa City",
+      "communityNameEn": "SE16",
+      "isBlocked": false,
+      "isMortgaged": true
+    },
+    {
+      "plotID": 506999,
+      "propertyId": 506999001,
+      "ownerId": 258015,
+      "titleDeedNumber": "AD-2026-000123",
+      "unitNumber": "101",
+      "ownershipPercentage": 100,
+      "ownershipTypeNameEn": "Ownership",
+      "eidNumber": null,
+      "licenseNumber": "CN-1298819",
+      "ownerNameEn": "Issuer Holding LLC",
+      "plotAddress": "1-42-0-9",
+      "districtNameEn": "Al Nahyan",
+      "communityNameEn": "E19_02",
+      "isBlocked": false,
+      "isMortgaged": false
     }
   ],
-  "totalCount": 1,
+  "totalCount": 3,
   "status": 1,
   "responseMessage": "Success",
   "errorCode": 0
 }
 ```
+
 </ResponseExample>

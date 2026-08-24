@@ -24,7 +24,7 @@ The checklist has **41 rows**; **31** require ADREC. Rather than expose 31 flat 
 | 24 | Daily licensed-PM list sync | READ (batch) | [Licensed Party Registry](/endpoints/licensed-party-registry) |
 | 25 | PM licence status monitoring | READ | [Licensed Party Registry](/endpoints/licensed-party-registry) |
 | 3 | Portfolio by registration ID | READ | [Owner Properties](/endpoints/owner-properties) |
-| 4 | Property / unit details | READ | [Property Details](/endpoints/property-details) |
+| 4 | Property / unit details | READ | [Property Details](/endpoints/property-details) — also resolves a plot's `propertyId`s |
 | 9 | Zoning / permitted-use | READ | [Property Details](/endpoints/property-details) (`propertyUsage`, `permittedUse`) |
 | 10 | Encumbrances / liens / mortgages | READ | [Property Details](/endpoints/property-details) (`mortgages[]`, `isMortgaged`) |
 | 11 | Restrictions / freezes / disputes | READ | [Property Details](/endpoints/property-details) (`blockings[]`, `endowmentContracts[]`) |
@@ -61,7 +61,7 @@ The checklist has **41 rows**; **31** require ADREC. Rather than expose 31 flat 
     Steps 15, 16, 17, and 37 are all mutations of the same title record and share the same saga semantics (idempotency key, quote → commit → receipt, evidence reference). They collapse into `POST /registry/transactions` with a `transactionType` discriminator. **Trade-off:** a single endpoint with a typed union payload is harder to statically type than four endpoints, but it guarantees consistent idempotency, signing, and receipt handling across every registry write — which matters because these are the only calls that change ADREC state.
   </Accordion>
   <Accordion title="Document retrievals → one Documents endpoint">
-    The title deed (5), completion certificate (7), and site plan / survey / floor plan (8) are all "fetch a registry document for this property." They collapse into `GET /property/documents/{plotID}` with a `docType` filter returning a uniform document descriptor. **Valuation (6) stays separate** because it feeds a *numeric* offering input (`valuationAmount`), not just a file. **Trade-off:** valuation could have folded in as another `docType`, but that would bury a required financial field inside a document list.
+    The title deed (5), completion certificate (7), and site plan / survey / floor plan (8) are all "fetch a registry document for this property." They collapse into `GET /property/documents/{plotID}?propertyId=` with a `docType` filter returning a uniform document descriptor — `propertyId` is required for property-level types (title deed, completion certificate, floor plan) and not applicable to plot-level ones (site plan, survey). **Valuation (6) stays separate** because it feeds a *numeric* offering input (`valuationAmount`), not just a file. **Trade-off:** valuation could have folded in as another `docType`, but that would bury a required financial field inside a document list.
   </Accordion>
   <Accordion title="Encumbrances & zoning are already inside Property Details">
     Steps 9, 10, and 11 are not separate calls — the property record already returns `propertyUsage`/`permittedUse`, `mortgages[]`/`isMortgaged`, and `blockings[]`/`endowmentContracts[]` inline. Splitting them out would mean re-fetching the same record. They are documented as fields of [Property Details](/endpoints/property-details), not endpoints.
@@ -80,6 +80,10 @@ The checklist has **41 rows**; **31** require ADREC. Rather than expose 31 flat 
   These are unresolved. Each needs ADREC to confirm whether the data exists and how it is exposed.
 </Warning>
 
+- **`propertyId` uniqueness scope.** Whether `propertyId` is unique **across the registry** or only **within its plot** is unconfirmed. Every property-scoped endpoint therefore takes the `(plotID, propertyId)` [pair](/introduction/conventions#the-plotid-propertyid-pair), which is correct under either answer. If ADREC confirms global uniqueness, a `/{propertyId}` shorthand path can be added without breaking the pair form. **This is the highest-priority open item** — it determines whether `assets.registry_reference` can be a single value or must be a composite key.
+- **Multi-property plots.** Confirm how ADREC represents several registrable properties on one plot (units, villas, floors), and whether every such property carries its own `titleDeedNumber`. [Property Details](/endpoints/property-details) is documented as the plot → properties resolver on that assumption.
+- **Subdivision provenance.** When a plot is subdivided, confirm whether pre-subdivision transactions appear in each resulting property's [Ownership History](/endpoints/ownership-history), and whether `propertyId`s are reissued.
+- **Per-property webhooks.** Confirm ADREC can emit `propertyId` on change events. Without it, VentureOne must freeze every offering on a plot when any property on it changes — see [Change Webhooks](/endpoints/change-webhooks#event-payload).
 - **Auth scheme is undefined.** The platform's ADREC client (`terreno/services/compliance/adres_client.py`) is placeholder scaffolding — auth is a TODO (bearer? HMAC? mTLS?), base URL is a stub, and credentials are runtime config, not env. The auth section here is a **proposal**, not a confirmed contract.
 - **Naming.** The codebase calls the provider **`adres`**; this document uses **ADREC**. Confirm the canonical name for the contract.
 - **Completion / structural certificate (7).** The earlier draft had no equivalent. Confirm ADREC issues a machine-retrievable completion or structural-integrity certificate, and whether it is a document, structured fields, or both.
@@ -94,6 +98,6 @@ The checklist has **41 rows**; **31** require ADREC. Rather than expose 31 flat 
 
 Derived from the `assets` / `offerings` / `tenant_lease_summaries` tables the integration populates:
 
-- `assets.registry_reference` and `assets.registry_validated` — require a stable ADREC key (`propertyId` / `titleDeedNumber`) and a verifiable "matches registry" signal. Covered by [Property Details](/endpoints/property-details) + [Title State](/endpoints/title-state).
+- `assets.registry_reference` and `assets.registry_validated` — require a stable ADREC key (the `(plotID, propertyId)` pair / `titleDeedNumber`) and a verifiable "matches registry" signal. One `assets` row is one *property*, so a plot-only reference cannot distinguish two units on the same plot. Covered by [Property Details](/endpoints/property-details) + [Title State](/endpoints/title-state).
 - `assets.legal_approved` — depends on encumbrance/eligibility flags (`isTradable`, `isSellable`, `blockings[]`). Covered by Property Details.
 - Revenue modelling (`property_revenue_reporting_models`, `tenant_lease_summaries`) — needs occupancy, rent index, and service-charge inputs. Covered by [Tenancy](/endpoints/tenancy), [Rental Index](/endpoints/rental-index), [Service Charges](/endpoints/service-charges).

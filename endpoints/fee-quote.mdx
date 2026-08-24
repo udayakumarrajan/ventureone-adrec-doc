@@ -15,16 +15,22 @@ Returns the government fee for a pending registry operation so VentureOne can pr
 
 | Field | Type | Req. | Values |
 | --- | --- | --- | --- |
-| `plotID` | int | **REQUIRED** | Target property |
+| `plotID` | int | **REQUIRED** | Parent plot of the target property |
+| `propertyId` | int | **REQUIRED** | The property being transferred / charged / annotated — the fee basis |
 | `transactionType` | enum | **REQUIRED** | `TITLE_TRANSFER` · `CHARGE_REGISTRATION` · `TOKENIZATION_ANNOTATION` · `ANNOTATION_RELEASE` |
 | `considerationAmount` | number | CONDITIONAL | Required for `TITLE_TRANSFER` — the transfer value |
 | `chargeAmount` | number | CONDITIONAL | Required for `CHARGE_REGISTRATION` |
+
+<Warning>
+  **`propertyId` is required.** Government fees are calculated from the value of the property being transferred, so a quote for "the plot" would price the wrong asset. The quote must name the same `(plotID, propertyId)` pair as the [Registry Transaction](/endpoints/registry-transactions) that consumes its `quoteId` — ADREC should reject a mismatched pair at commit rather than charge against the wrong title.
+</Warning>
 
 ## Response
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
 | `quoteId` | string | **REQUIRED** | Pass to [Fee Payment](/endpoints/fee-payment) |
+| `plotID` / `propertyId` | int | **REQUIRED** | Echoes the quoted property — verify before committing |
 | `lineItems[]` | object[] | **REQUIRED** | `{ code, descriptionEn, amount }` fee breakdown |
 | `totalAmount` | number | **REQUIRED** | Total fee |
 | `currency` | string | **REQUIRED** | `AED` |
@@ -40,6 +46,7 @@ Content-Type: application/json
 ```json Request
 {
   "plotID": 506999,
+  "propertyId": 506999002,
   "transactionType": "TITLE_TRANSFER",
   "considerationAmount": 2750000
 }
@@ -50,6 +57,8 @@ Content-Type: application/json
 ```json Response
 {
   "quoteId": "FQ-2026-771201",
+  "plotID": 506999,
+  "propertyId": 506999002,
   "lineItems": [
     { "code": "TRANSFER_FEE", "descriptionEn": "Transfer fee (2%)", "amount": 55000 },
     { "code": "ADMIN_FEE", "descriptionEn": "Administrative fee", "amount": 1000 }

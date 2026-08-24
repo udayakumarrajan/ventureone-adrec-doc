@@ -6,16 +6,32 @@ description: "Provenance — prior owners and title transactions for due diligen
 <Note>🔒 **Encrypted payload — response.** Prior-owner identities are PII → single JWE.</Note>
 
 ```http
-GET /property/ownership-history/{plotID}
+GET /property/ownership-history/{plotID}?propertyId={propertyId}
 ```
 
 Returns the chain of ownership and title transactions for a property, used for due-diligence provenance.
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyId` | int | **REQUIRED** | The property whose chain of title to return |
+| `pageNumber` / `pageSize` | int | OPTIONAL | [Pagination](/introduction/conventions#pagination) — see below |
+
+<Warning>
+  **`propertyId` is required here.** A chain of title belongs to one property. Interleaving the transaction histories of every unit on a plot into one list would make provenance unreadable — and a sale of unit 101 says nothing about unit 102's title.
+</Warning>
+
+<Note>
+  Where the plot itself was subdivided, the pre-subdivision transactions are part of every resulting property's provenance. Expect the same plot-level transaction to appear in more than one property's history — dedupe on `transactionId`. Confirm with ADREC how subdivision is represented.
+</Note>
 
 ## Response
 
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
-| `plotID` | int | **REQUIRED** | Property key |
+| `plotID` | int | **REQUIRED** | Parent plot — echoes the request |
+| `propertyId` | int | **REQUIRED** | The property this chain belongs to — echoes the request |
 | `transactions[]` | Transaction[] | **REQUIRED** | Chronological history — item fields below |
 | `totalCount` | int | **REQUIRED** | [Pagination](/introduction/conventions#pagination) |
 | `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
@@ -28,7 +44,7 @@ Returns the chain of ownership and title transactions for a property, used for d
 | `transactionType` | object | **REQUIRED** | Coded value `{ constant, lookupNameEn, lookupNameAr }` — `SALE` · `GRANT` · `INHERITANCE` · `TRANSFER` · `MORTGAGE` … |
 | `transactionDate` | date | **REQUIRED** | ISO-8601 |
 | `fromOwnerNameEn` / `toOwnerNameEn` | string | **REQUIRED** | Parties (PII) |
-| `sharePercentage` | number | **REQUIRED** | Share moved |
+| `sharePercentage` | number | **REQUIRED** | Share moved — partial transfers between co-owners are normal |
 | `amount` | number | OPTIONAL | Consideration, if disclosed |
 | `currency` | string | OPTIONAL | `AED` |
 
@@ -45,6 +61,7 @@ Authorization: Bearer <access-token>
 ```json Response · decrypted
 {
   "plotID": 506999,
+  "propertyId": 506999002,
   "transactions": [
     {
       "transactionId": "TX-2022-114203",
