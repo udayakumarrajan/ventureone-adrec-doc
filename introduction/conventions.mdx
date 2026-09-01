@@ -74,6 +74,8 @@ Omitting `propertyId` where the endpoint allows it widens the call to **plot sco
 
 [Property Details](/endpoints/property-details) is the resolver. `GET /property/details?plotID={plotID}` returns `propertyDetails[]` — one item per property on the plot, each with its `propertyId` and its own `ownerships[]`. Add `&ownerId=` to return only the properties a given party owns.
 
+Where the only identifier you hold is the land-department (DLD) number, [Property Details by DLD Number](/endpoints/property-details-by-dld) resolves in the opposite direction — DLD number → the `(plotID, propertyId)` pair — and returns the same record.
+
 ```
 plotID 506999
 ├── propertyId 506999001  ownerships[] → Issuer Holding LLC (100%)

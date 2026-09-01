@@ -68,6 +68,7 @@
             "pages": [
               "endpoints/owner-properties",
               "endpoints/property-details",
+              "endpoints/property-details-by-dld",
               "endpoints/property-status",
               "endpoints/title-state",
               "endpoints/ownership-history",

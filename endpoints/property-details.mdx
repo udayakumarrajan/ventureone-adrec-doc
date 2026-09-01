@@ -22,6 +22,10 @@ The core record for a property. It is deliberately broad: it carries the attribu
 | `ownerId` | int | OPTIONAL | Return only the properties this party owns — use the `ownerId` from [Owner Properties](/endpoints/owner-properties) |
 | `pageNumber` / `pageSize` | int | OPTIONAL | [Pagination](/introduction/conventions#pagination) — pages over `propertyDetails[]` |
 
+<Info>
+  Hold a **DLD number** instead of a `plotID`? [Property Details by DLD Number](/endpoints/property-details-by-dld) resolves it to the `(plotID, propertyId)` pair and returns the same `Property` fields as a single object.
+</Info>
+
 <Note>
   `propertyId` is passed **alongside** `plotID`, never on its own — its uniqueness scope is [unconfirmed](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec). Every other property-scoped endpoint takes the same `(plotID, propertyId)` pair.
 </Note>
@@ -31,8 +35,12 @@ The core record for a property. It is deliberately broad: it carries the attribu
 | Field | Type | Req. | Use |
 | --- | --- | --- | --- |
 | `propertyDetails[]` | Property[] | **REQUIRED** | **One item per property** on the plot — item fields below |
-| `totalCount` | int | **REQUIRED** | Number of properties matching the filter |
+| `totalCount` | int | **REQUIRED** | Number of properties matching the filter. **`0` or `1` whenever `propertyId` is supplied** — see below |
 | `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<Note>
+  **The list is plot-scoped by design.** `plotID` selects a *scope*, so the root is a list even when the filter narrows it — the same shape as [Property Status](/endpoints/property-status). Supplying `propertyId` is a guarantee, not a hint: `totalCount` is then **`0` or `1`** and `propertyDetails` holds at most that one item, so a caller need not loop. Endpoints keyed on a single property — [Title State](/endpoints/title-state), [Valuation](/endpoints/valuation), [Property Details by DLD Number](/endpoints/property-details-by-dld) — return a flat object instead.
+</Note>
 
 ### `Property` — identifiers & registration
 

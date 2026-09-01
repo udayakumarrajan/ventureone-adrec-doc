@@ -24,7 +24,7 @@ Registry documents do not all sit at the same level, so `propertyId` is required
 | `SURVEY` | **Plot** — the parcel survey | Not applicable — ignored if sent |
 
 <Warning>
-  Requesting `TITLE_DEED` without `propertyId` on a multi-property plot returns a `422` rather than an arbitrary deed. Returning "a" deed for a plot is the single most dangerous ambiguity in this integration: VentureOne would validate the wrong title and tokenize a property the issuer does not own.
+  Requesting `TITLE_DEED` without `propertyId` on a multi-property plot returns a `422` (`errorCode 1422`) rather than an arbitrary deed. Returning "a" deed for a plot is the single most dangerous ambiguity in this integration: VentureOne would validate the wrong title and tokenize a property the issuer does not own.
 </Warning>
 
 When `docType` is omitted, the response mixes both levels. Each `Document` carries a `level` and — for property-level documents — its own `propertyId`, so callers can tell which is which. Omitting `propertyId` in that case returns the plot-level documents plus every property's documents.
@@ -115,8 +115,8 @@ Authorization: Bearer <access-token>
 ```json GET …?docType=TITLE_DEED without propertyId · 422
 {
   "status": 0,
-  "responseMessage": "propertyId is required for docType=TITLE_DEED — plot 506999 has 2 properties",
-  "errorCode": 4221
+  "responseMessage": "propertyId is required for this call — plot 506999 has 2 properties: [506999001, 506999002]",
+  "errorCode": 1422
 }
 ```
 
