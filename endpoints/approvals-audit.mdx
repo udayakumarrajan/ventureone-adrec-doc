@@ -1,0 +1,57 @@
+---
+title: "Audit trail"
+description: "Every step of every approval request, per request or per offering, for ADREC's own record."
+---
+
+```http
+GET /approvals/{approvalId}/audit
+GET /approvals/offerings/{offeringId}/audit?limit={limit}
+```
+
+**Officer token only.** ADREC's own record of every step: who did it, the state after it, and for checks, every check with its result. Oldest first. `limit` is 1–2,000 (default 500) on the offering form.
+
+## Events
+
+| `event` | Actor | When |
+| --- | --- | --- |
+| `filed` | Platform | A request was filed |
+| `approved` / `rejected` | Officer | The officer's decision, with `detail` = the reason |
+| `verified` | Platform | Every verifier check passed; signing requested from ADREC's custody |
+| `refused` | Platform | A verifier check failed; ADREC did not sign |
+| `signed` | `verifier` | Key 1's signature delivered |
+| `signing_failed` / `released` | `verifier` | Signing failed; the approval is free for a corrected transaction |
+| `settled` | Platform | The mined transaction passed every settlement check; units entered in the register |
+| `settlement_refused` | Platform | A settlement check failed; nothing registered |
+
+## Entry
+
+| Field | Type | Use |
+| --- | --- | --- |
+| `approvalId` / `offeringId` / `offeringName` | string | Which request, which offering |
+| `event` / `actor` / `state` | string | What happened, who, and the state after |
+| `safeTxHash` | string | The Safe transaction involved, if any |
+| `checks[]` | object[] | `{ name, passed, detail }` for `verified`, `refused`, `settled` and `settlement_refused` |
+| `detail` | string | The reason, or a summary |
+| `at` | datetime | When |
+
+<ResponseExample>
+```json Response
+{
+  "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+  "entries": [
+    { "approvalId": "APR-EA0ACC036108", "event": "filed", "actor": "orchestrator", "state": "PENDING",
+      "detail": "2 allocations, 100 units; title deed AD-2024-071744 sha256 9aa0a6bd…998c", "at": "2026-10-16T20:45:35Z" },
+    { "approvalId": "APR-EA0ACC036108", "event": "approved", "actor": "officer-a", "state": "APPROVED",
+      "detail": "Title deed AD-2024-071744 and the allocation register checked.", "at": "2026-10-16T20:45:54Z" },
+    { "approvalId": "APR-EA0ACC036108", "event": "verified", "actor": "orchestrator", "state": "SIGNING",
+      "checks": [ { "name": "title_deed_anchored", "passed": true, "detail": "" } ], "at": "2026-10-16T20:46:12Z" },
+    { "approvalId": "APR-EA0ACC036108", "event": "signed", "actor": "verifier", "state": "SIGNED",
+      "detail": "signed by ADREC key 1", "at": "2026-10-16T20:46:12Z" },
+    { "approvalId": "APR-EA0ACC036108", "event": "settled", "actor": "orchestrator", "state": "SETTLED",
+      "detail": "0x… in block 11929691: 100 units to 2 wallets entered in the title register", "at": "2026-10-17T08:29:37Z" }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

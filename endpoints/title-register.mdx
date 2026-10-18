@@ -1,0 +1,58 @@
+---
+title: "Title register"
+description: "ADREC's register of Title units per wallet for one Title Token, built only from settled approvals."
+---
+
+```http
+GET /title-register/{titleToken}
+```
+
+**Platform or officer token.** ADREC's record of how many Title units each wallet holds for one Title Token, and the settlements that built it. It changes only through a [settlement](/endpoints/approvals-settlement) ADREC has checked on its own node.
+
+VentureOne reconciles every wallet against four sources, at completion and nightly: its own records, this register, the Title Token balance and the ARVA Token balance. A wallet where any of them differ stops the raise for a person. This is also how a Title movement made by ADREC alone (key 1 + key 2) shows up on VentureOne's side.
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `titleToken` | address | **REQUIRED** | Echoes the request |
+| `totalUnits` | int | **REQUIRED** | Sum of `holders[].units` |
+| `holders[]` | object[] | **REQUIRED** | `{ wallet, units }`, largest holding first; wallets holding nothing are omitted |
+| `settlements[]` | object[] | **REQUIRED** | `{ approvalId, offeringId, offeringName, txHash, blockNumber, settledAt, units }`, oldest first |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+<Note>
+  An unknown Title Token returns an empty register, not `404`: the register for a token nothing has settled on is empty.
+</Note>
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "titleToken": "0x0D9eBb27bFCC6CfC7ae88f119B68DCD1977856CE",
+  "totalUnits": 100,
+  "holders": [
+    { "wallet": "0x4DE592a755C2e007EaB8D10b715Ef5B94E16d0Ef", "units": 50 },
+    { "wallet": "0xEf673Ba4452d3147a9B57C2BB1b186B27a63beB6", "units": 50 }
+  ],
+  "settlements": [
+    {
+      "approvalId": "APR-EA0ACC036108",
+      "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+      "offeringName": "Parkway Villa 12 — Dual-Token",
+      "txHash": "0x…",
+      "blockNumber": 11929691,
+      "settledAt": "2026-10-17T08:29:37Z",
+      "units": 100
+    }
+  ],
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

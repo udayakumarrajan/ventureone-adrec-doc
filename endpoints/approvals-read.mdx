@@ -1,0 +1,76 @@
+---
+title: "Read approval requests"
+description: "One approval request by id, or the requests for an offering, by state or by VentureOne's reference."
+---
+
+```http
+GET /approvals/{approvalId}
+GET /approvals?offeringId={offeringId}&reference={reference}&state={state}&limit={limit}
+```
+
+**Platform or officer token.** VentureOne polls `GET /approvals/{approvalId}` until an officer decides, and again while a signature is `SIGNING`. The list form lets VentureOne find a filing whose answer it lost, by its own `reference`, before filing again.
+
+## Query parameters (list)
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `offeringId` | string | — | One offering's requests, newest first |
+| `reference` | string | — | Exact match on VentureOne's reference; requires `offeringId` |
+| `state` | enum | — | `PENDING`, `APPROVED`, `REJECTED`, `SIGNING`, `SIGNED`, `SETTLED` |
+| `limit` | int | — | 1–500, default 100 |
+
+The list returns `{ approvals: [ … ] }` in the envelope.
+
+## The approval request
+
+| Field | Type | Use |
+| --- | --- | --- |
+| `approvalId` | string | ADREC's id, issued at filing |
+| `approvalType` | enum | See [Approval types](/introduction/dual-token#approval-types) |
+| `state` | enum | See [Request lifecycle](/introduction/dual-token#request-lifecycle) |
+| `propertyRef` / `offeringId` / `offeringName` | string | As filed |
+| `titleSafe` / `titleToken` | address | As filed, checksummed |
+| `reference` | string | VentureOne's reference, as filed |
+| `allocations[]` / `transfer` / `documents[]` | — | The payload, as filed |
+| `titleDeed` | object | The deed, as filed and checked |
+| `createdAt` / `expiresAt` | datetime | An undecided request cannot be approved after `expiresAt` |
+| `decidedBy` / `decidedAt` / `decisionReason` | — | The officer's decision |
+| `safeTxHash` | string | The Safe transaction this approval was spent on; set from `SIGNING` |
+| `signature` | string | Key 1's signature; set when `SIGNED` |
+| `settlementTxHash` / `settlementBlock` / `settledAt` | — | The mined transaction ADREC checked; set when `SETTLED` |
+
+<ResponseExample>
+```json Response · SETTLED
+{
+  "approvalId": "APR-EA0ACC036108",
+  "approvalType": "PRIMARY_ISSUANCE",
+  "state": "SETTLED",
+  "propertyRef": "71744",
+  "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+  "offeringName": "Parkway Villa 12 — Dual-Token",
+  "titleSafe": "0x8f2D0b6a1E5c4F37b9A1d2e3c4B5a6978F0e1D2c",
+  "titleToken": "0x0D9eBb27bFCC6CfC7ae88f119B68DCD1977856CE",
+  "reference": "issuance:5c5cbc33-82c5-4ced-9b3c-fe07e3329497",
+  "allocations": [
+    { "wallet": "0xEf673Ba4452d3147a9B57C2BB1b186B27a63beB6", "units": 50 },
+    { "wallet": "0x4DE592a755C2e007EaB8D10b715Ef5B94E16d0Ef", "units": 50 }
+  ],
+  "transfer": null,
+  "documents": [],
+  "titleDeed": { "plotId": 71744, "propertyId": 71744001, "titleDeedNumber": "AD-2024-071744",
+                 "sha256": "9aa0a6bd…998c", "anchor": "adrec:title-deed?plot=71744&…" },
+  "createdAt": "2026-10-16T20:45:35Z",
+  "expiresAt": "2026-10-19T20:45:35Z",
+  "decidedBy": "officer-a",
+  "decidedAt": "2026-10-16T20:45:54Z",
+  "decisionReason": "Title deed and allocation register checked.",
+  "safeTxHash": "0x…",
+  "signature": "0x…",
+  "settlementTxHash": "0x…",
+  "settlementBlock": 11929691,
+  "settledAt": "2026-10-17T08:29:37Z",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

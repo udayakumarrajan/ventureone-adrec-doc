@@ -1,0 +1,61 @@
+---
+title: "Report a settlement"
+description: "VentureOne reports the mined transaction; ADREC checks it on its own node and enters the units in its title register."
+---
+
+```http
+POST /approvals/{approvalId}/settlement
+```
+
+**Platform token only.** Once the transaction carrying a `SIGNED` request's Title Safe transaction is mined, VentureOne reports its hash. ADREC **does not take the report's word**: it reads the receipt from its own node and runs the checks below. Only then is the request `SETTLED`, and the minted units are entered in ADREC's [title register](/endpoints/title-register) in the same database transaction.
+
+## Body
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `txHash` | string | **REQUIRED** | The mined transaction, 32 bytes of hex |
+
+## ADREC's checks
+
+| Check | Refuses when |
+| --- | --- |
+| `primary_issuance` | The request is not a `PRIMARY_ISSUANCE` (other types do not settle yet) |
+| `transaction_succeeded` | The receipt's status is not success |
+| `title_safe_executed_the_signed_transaction` | The Title Safe did not emit exactly one `ExecutionSuccess` for the Safe transaction ADREC signed, or emitted an `ExecutionFailure` for it |
+| `minted_exactly_as_approved` | The Title Token's mints in this transaction differ, wallet by wallet, from the approved allocations |
+| `no_other_title_movements` | The Title Token moved anything besides those mints |
+
+A failed check answers `1000` naming the check, is recorded as `settlement_refused` with every check, and leaves the request `SIGNED`. Nothing enters the register.
+
+## Retries
+
+| Situation | Answer | VentureOne |
+| --- | --- | --- |
+| The same transaction reported again | `200`, the settled request | Treats it as done; a lost answer is never a problem |
+| ADREC's node has no receipt yet | `425`, `errorCode 1425` | Reports again later; a node can lag a block behind |
+| A different transaction for a settled request | `409` | Stops for a person |
+| ADREC's node does not answer | `503` | Reports again later |
+
+## Response
+
+The [approval request](/endpoints/approvals-read#the-approval-request) with `state: "SETTLED"`, `settlementTxHash`, `settlementBlock` and `settledAt`.
+
+<RequestExample>
+```json Request
+{ "txHash": "0x…" }
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "approvalId": "APR-EA0ACC036108",
+  "state": "SETTLED",
+  "settlementTxHash": "0x…",
+  "settlementBlock": 11929691,
+  "settledAt": "2026-10-17T08:29:37Z",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

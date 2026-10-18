@@ -1,0 +1,47 @@
+---
+title: "Approve or reject"
+description: "An ADREC officer decides a pending request, with a reason."
+---
+
+```http
+POST /approvals/{approvalId}/approve
+POST /approvals/{approvalId}/reject
+```
+
+**Officer token only.** VentureOne cannot call these. The decision and its reason are written to ADREC's [audit trail](/endpoints/approvals-audit) with the officer's name.
+
+## Body
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `reason` | string | Recommended | Up to 500 characters. Shown to VentureOne's operators, and required in practice on a rejection: it is what they act on |
+
+## Rules
+
+- Only a `PENDING` request can be decided. A second decision is `1409`.
+- An expired request cannot be approved (`1000`); VentureOne files it again.
+- **A rejection is final for that request.** VentureOne holds the raise: nothing is minted and nothing is re-sent automatically. An operator either files a **new** request, linked to the rejected one, or cancels the raise and refunds its investors.
+
+## Response
+
+The [approval request](/endpoints/approvals-read#the-approval-request) with `state` `APPROVED` or `REJECTED`, `decidedBy`, `decidedAt` and `decisionReason`.
+
+<RequestExample>
+```json Request
+{ "reason": "Title deed AD-2024-071744 and the allocation register checked: 2 allocations of 50 units match the subscriptions." }
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "approvalId": "APR-EA0ACC036108",
+  "state": "APPROVED",
+  "decidedBy": "officer-a",
+  "decidedAt": "2026-10-16T20:45:54Z",
+  "decisionReason": "Title deed AD-2024-071744 and the allocation register checked: 2 allocations of 50 units match the subscriptions.",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

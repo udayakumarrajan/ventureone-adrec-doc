@@ -1,0 +1,86 @@
+---
+title: "Request ADREC's signature"
+description: "VentureOne sends the Title Safe transaction; ADREC's verifier checks it and signs with key 1."
+---
+
+```http
+POST /approvals/{approvalId}/signatures
+```
+
+**Platform token only.** VentureOne sends the Title Safe transaction it built for an `APPROVED` request. ADREC's **verifier** recomputes the Safe transaction hash itself, reads the Safe and the Title Token from **ADREC's own node**, and runs every check below. Only if all pass does key 1 sign, through ADREC's custody.
+
+<Warning>
+  A signer sees only a hash, which says nothing about what the transaction does. The verifier is what stops ADREC signing, for example, a transaction that makes VentureOne the Title Safe's only owner. It must run on ADREC's side. See [Recommendations](/introduction/dual-token-recommendations).
+</Warning>
+
+## Body
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `safe` | address | **REQUIRED** | The Title Safe |
+| `safeTx` | object | **REQUIRED** | The Safe transaction, Safe field names: `to`, `value`, `data`, `operation`, `safeTxGas`, `baseGas`, `gasPrice`, `gasToken`, `refundReceiver`, `nonce` |
+| `safeTxHash` | string | **REQUIRED** | The hash VentureOne expects. ADREC recomputes it and refuses a mismatch |
+
+## The verifier's checks
+
+Every check is recorded in ADREC's [audit trail](/endpoints/approvals-audit), passed or failed.
+
+| Check | Refuses when |
+| --- | --- |
+| `approval_is_approved` / `approval_not_expired` | The request is not `APPROVED`, or has expired |
+| `hash_recomputed` | ADREC's own hash of `safeTx` differs from `safeTxHash` |
+| `safe_is_the_approved_title_safe` | `safe` is not the Title Safe the request names |
+| `safe_deployed` | No Safe at that address on ADREC's node |
+| `adrec_key1_is_owner` / `threshold_needs_two` | ADREC key 1 is not an owner, or the threshold is below 2 |
+| `no_quorum_without_adrec` | Owners other than ADREC's keys could reach the threshold |
+| `no_modules` / `no_guard` | The Safe has a module or a guard that could act around the owners |
+| `nonce_is_next` | The transaction is not at the Safe's next nonce |
+| `no_gas_refund` / `no_eth` / `no_eth_in_calls` | Any gas refund or ETH moves |
+| `batch_structure` | The batch is not the expected whitelist → mints → whitelist reset |
+| `only_the_title_token` / `no_call_to_the_safe` | A call targets anything but the Title Token, or the Safe itself |
+| `functions_allowed` | A call uses a function outside ADREC's allowlist |
+| `matches_approved_content` | The wallets or units differ from what the officer approved |
+| `title_deed_anchored` | The Title Token's `documentUri()` is not the approved deed's anchor |
+
+## Response
+
+| `state` | Meaning |
+| --- | --- |
+| `SIGNED` | Every check passed; `signature` carries key 1's signature |
+| `SIGNING` | ADREC's custody is still approving; poll [`GET /approvals/{approvalId}`](/endpoints/approvals-read) |
+
+A failed check answers `1000` with the check's name in `responseMessage`, and nothing is signed. The approval stays `APPROVED`, so a corrected transaction can be sent. Once the approval is spent on a transaction, any other transaction is `1409`: one approval, one transaction.
+
+<RequestExample>
+```json Request
+{
+  "safe": "0x8f2D0b6a1E5c4F37b9A1d2e3c4B5a6978F0e1D2c",
+  "safeTx": {
+    "to": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2",
+    "value": "0",
+    "data": "0x8d80ff0a…",
+    "operation": 1,
+    "safeTxGas": "0",
+    "baseGas": "0",
+    "gasPrice": "0",
+    "gasToken": "0x0000000000000000000000000000000000000000",
+    "refundReceiver": "0x0000000000000000000000000000000000000000",
+    "nonce": 0
+  },
+  "safeTxHash": "0x…"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "approvalId": "APR-EA0ACC036108",
+  "state": "SIGNED",
+  "safeTxHash": "0x…",
+  "signature": "0x…",
+  "status": 1,
+  "errorCode": 0
+}
+```
+</ResponseExample>

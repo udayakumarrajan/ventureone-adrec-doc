@@ -1,0 +1,70 @@
+---
+title: "Recommendations"
+description: "VentureOne's recommendations to ADREC for running the dual-token approval APIs in production."
+---
+
+What VentureOne recommends ADREC adopts when it builds these APIs, from building and testing the flow end to end, with the reason for each. Items marked **decision** need ADREC's agreement before VentureOne builds on them.
+
+## Approvals
+
+<AccordionGroup>
+  <Accordion title="Consider one approval per offering, not per batch (decision)">
+    Today an officer decides every batch of up to 100 investors separately, so an offering of 1,000 investors is 10 decisions. ADREC could instead approve an **offering's full allocation list once**, and let that approval authorise one transaction per batch. The verifier would then check that each batch transaction mints a part of the approved list, that the parts never overlap, and that together they never exceed it.
+
+    **Protects:** officer workload on large offerings. **Costs:** "one approval, one transaction" becomes "one approval, a bounded set of transactions", which the verifier must track. Until agreed, VentureOne files one request per batch.
+  </Accordion>
+  <Accordion title="Key every request by the approvalId ADREC issues">
+    `approvalId` identifies one decision about one set of allocations. A title-deed number does not: one deed carries many requests over its life (batches, re-filings after a rejection, secondary transfers, corrections). Keying by deed would let a signature be applied against the wrong decision. The deed is still checked on every request: it is part of the filing and of the verifier's checks.
+  </Accordion>
+  <Accordion title="Accept VentureOne's reference for lost answers">
+    Filing has no idempotency key. VentureOne sends its own `reference` with every filing and, after a timeout, looks the request up by `offeringId` + `reference` before filing again. Keep `reference` searchable so a lost answer never becomes a duplicate request.
+  </Accordion>
+  <Accordion title="Agree turnaround times and operating hours">
+    VentureOne waits for the officer and never proceeds on its own; requests expire after 72 hours undecided. Agree a target turnaround and operating hours, so investors can be told when to expect their tokens.
+  </Accordion>
+  <Accordion title="Optional: notify VentureOne of a decision">
+    VentureOne polls today, and ADREC calls nothing of VentureOne's. A decision webhook would shorten the wait after approval. It is an optimisation only: polling stays the source of truth.
+  </Accordion>
+</AccordionGroup>
+
+## Signing
+
+<AccordionGroup>
+  <Accordion title="Run the verifier on ADREC's side, never VentureOne's">
+    A signer sees only a hash, which says nothing about what the transaction does. The verifier rebuilds the transaction and checks it against the approval and the chain before key 1 signs. If VentureOne ran it, a compromised VentureOne system could obtain ADREC's signature on anything, for example making itself the Title Safe's only owner.
+  </Accordion>
+  <Accordion title="Hold key 1 in ADREC's custody, and key 2 offline">
+    Key 1 signs through ADREC's own custody, called by the verifier only. Key 2 is never asked to sign by the platform: it lets ADREC act without VentureOne (a court order, VentureOne unavailable). Keep it with API signing disabled.
+  </Accordion>
+  <Accordion title="Read the chain from ADREC's own node">
+    The verifier and the settlement check must read the Safe, the token and the receipt from an RPC ADREC controls, never from one VentureOne supplies. Confirm the node serves the expected chain before trusting it.
+  </Accordion>
+  <Accordion title="Refuse a Title Safe that could act without ADREC">
+    Keep the checks that refuse a Safe where owners other than ADREC's keys could reach the threshold, a Safe with modules or a guard, any call to the Safe itself, and any ETH movement.
+  </Accordion>
+</AccordionGroup>
+
+## Settlement and the register
+
+<AccordionGroup>
+  <Accordion title="Register only what ADREC has verified on chain">
+    Enter units in the title register only from a transaction ADREC has read from its own node: it succeeded, the Title Safe executed the Safe transaction ADREC signed, and the Title Token minted exactly the approved allocations and moved nothing else. Never from the report's word alone.
+  </Accordion>
+  <Accordion title="Answer 'too early' rather than 'wrong'">
+    Right after mining, a node can lag a block behind. A transaction ADREC cannot see yet should answer `425` (`errorCode 1425`) so VentureOne reports it again, rather than a refusal that stops the raise.
+  </Accordion>
+  <Accordion title="Expose the register for reconciliation">
+    VentureOne compares every wallet across its own records, ADREC's register, and the Title and ARVA balances, at completion and nightly. A wallet that differs stops the raise for a person. This is also how a Title movement ADREC makes alone (key 1 + key 2) shows up on VentureOne's side.
+  </Accordion>
+  <Accordion title="Settle secondary transfers and document anchoring the same way (decision)">
+    Settlement is built for primary issuances. Secondary transfers and document anchoring should settle on the same principle (ADREC reads the receipt itself, then updates the register) once their flows are agreed.
+  </Accordion>
+</AccordionGroup>
+
+## Capacity
+
+<AccordionGroup>
+  <Accordion title="Size batches to the chain's gas limit">
+    One batch is one transaction. A Safe transaction carries at most 200 calls, so at most 198 investors per batch. The chain's per-transaction gas limit may be lower: Ethereum Sepolia caps a transaction at about 16.7M gas, and a two-investor batch used about 2.35M. VentureOne refuses an oversized batch before sending it and splits the offering into smaller batches; the batch size should be calibrated on the production chain.
+  </Accordion>
+</AccordionGroup>

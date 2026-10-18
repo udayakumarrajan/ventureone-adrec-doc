@@ -1,0 +1,75 @@
+---
+title: "Title deed"
+description: "A property's title deed, the SHA-256 of its PDF, and the anchor the Title Token carries."
+---
+
+```http
+GET /property/title-deed/{plotID}?propertyId={propertyId}
+GET /property/title-deed/{plotID}/document?propertyId={propertyId}
+```
+
+Returns the property's **title deed**, a link to the deed PDF, the PDF's **SHA-256**, and the **anchor**: the exact string the Title Token carries as its document URI. VentureOne calls it once, before deploying the Title Token, downloads the PDF from ADREC's own address and hashes it itself. A hash that does not match stops the raise before anything is deployed.
+
+ADREC's verifier later refuses to co-sign a mint unless the Title Token's `documentUri()` on chain equals this anchor. See [Request ADREC's signature](/endpoints/approvals-sign).
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `propertyId` | int | Required on a subdivided plot | The property whose deed to return. On an undivided plot it may be omitted; the response names it. |
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `plotID` | int | **REQUIRED** | Echoes the request |
+| `propertyId` | int | **REQUIRED** | The property this deed belongs to |
+| `titleDeedNumber` | string | **REQUIRED** | The deed reference |
+| `issueDate` | datetime | **REQUIRED** | When the deed was issued |
+| `deedType` | string | **REQUIRED** | For example `freehold` |
+| `document.url` | string | **REQUIRED** | ADREC-relative path of the deed PDF |
+| `document.contentType` | string | **REQUIRED** | `application/pdf` |
+| `document.sizeBytes` | int | **REQUIRED** | Size of the PDF |
+| `document.sha256` | string | **REQUIRED** | 64 lowercase hex of the PDF bytes |
+| `anchor` | string | **REQUIRED** | The Title Token's document URI |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+### The anchor
+
+```
+adrec:title-deed?plot={plotID}&property={propertyId}&deed={titleDeedNumber}&sha256={sha256}
+```
+
+It names the property and the deed and carries the PDF's fingerprint, and **nothing personal**: no owner names or identity numbers go on chain. Anyone holding the deed can hash it and compare it with the token's document URI.
+
+<Warning>
+  **The PDF must be byte-identical on every call.** The anchor is fixed on chain at deploy; a regenerated PDF with a different hash would no longer match the token. `GET …/document` returns the same bytes the `sha256` was computed from.
+</Warning>
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "plotID": 71744,
+  "propertyId": 71744001,
+  "titleDeedNumber": "AD-2024-071744",
+  "issueDate": "2024-03-11T00:00:00Z",
+  "deedType": "freehold",
+  "document": {
+    "url": "/property/title-deed/71744/document?propertyId=71744001",
+    "contentType": "application/pdf",
+    "sizeBytes": 937,
+    "sha256": "9aa0a6bd0aaf22c66ab98909f784efb51d04e185c74467fcb507612f781e998c"
+  },
+  "anchor": "adrec:title-deed?plot=71744&property=71744001&deed=AD-2024-071744&sha256=9aa0a6bd0aaf22c66ab98909f784efb51d04e185c74467fcb507612f781e998c",
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+</ResponseExample>

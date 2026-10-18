@@ -50,6 +50,13 @@
               "introduction/conventions",
               "introduction/security"
             ]
+          },
+          {
+            "group": "Dual-token model",
+            "pages": [
+              "introduction/dual-token",
+              "introduction/dual-token-recommendations"
+            ]
           }
         ]
       },
@@ -95,6 +102,19 @@
               "endpoints/beneficial-owners-remove",
               "endpoints/beneficial-owners-batch-sync",
               "endpoints/beneficial-owners-read"
+            ]
+          },
+          {
+            "group": "Dual-Token Approvals",
+            "pages": [
+              "endpoints/title-deed",
+              "endpoints/approvals-file",
+              "endpoints/approvals-read",
+              "endpoints/approvals-decide",
+              "endpoints/approvals-sign",
+              "endpoints/approvals-settlement",
+              "endpoints/title-register",
+              "endpoints/approvals-audit"
             ]
           },
           {

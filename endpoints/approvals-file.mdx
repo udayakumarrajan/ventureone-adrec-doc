@@ -1,0 +1,81 @@
+---
+title: "File an approval request"
+description: "VentureOne asks ADREC to approve one Title Token movement: a batch of mints, a transfer, or document anchoring."
+---
+
+```http
+POST /approvals
+```
+
+**Platform token only.** VentureOne files one request per batch of investors in one offering (see [How many requests ADREC receives](/introduction/dual-token#how-many-requests-adrec-receives)). ADREC validates the content now, so an officer never approves something that cannot be signed, and checks the title deed against its own registry. The request starts `PENDING`.
+
+## Body
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `approvalType` | enum | **REQUIRED** | `PRIMARY_ISSUANCE`, `SECONDARY_TRANSFER` or `DOCUMENT_ANCHORING` |
+| `propertyRef` | string | **REQUIRED** | The property the token represents (ADREC plot reference) |
+| `offeringId` | string | **REQUIRED** | VentureOne's offering id; ADREC's record and audit trail are read per offering |
+| `offeringName` | string | **REQUIRED** | Shown to the officer |
+| `titleSafe` | address | **REQUIRED** | The 2-of-3 Safe that owns the Title Token |
+| `titleToken` | address | **REQUIRED** | The Title Token; must differ from `titleSafe` |
+| `reference` | string | Recommended | VentureOne's own reference for this filing, searchable on [Read approval requests](/endpoints/approvals-read) |
+| `titleDeed` | object | **REQUIRED** | The deed exactly as [Title deed](/endpoints/title-deed) returned it: `plotId`, `propertyId`, `titleDeedNumber`, `sha256`, `anchor` |
+| `allocations[]` | object[] | For `PRIMARY_ISSUANCE` | `{ wallet, units }` per investor; each wallet once, never the Safe or the token; `units > 0` |
+| `transfer` | object | For `SECONDARY_TRANSFER` | `{ fromWallet, toWallet, units }` |
+| `documents[]` | object[] | For `DOCUMENT_ANCHORING` | `{ name, uri, hash }`; `name` and `hash` are bytes32 hex |
+
+`units` are token base units. VentureOne's tokens have 0 decimals, so units are whole fractions.
+
+## Response
+
+`201` with the [approval request](/endpoints/approvals-read#the-approval-request), `state: "PENDING"` and the `approvalId` ADREC issued. Every later call names that `approvalId`.
+
+| Error | When |
+| --- | --- |
+| `1000` | A field is missing or invalid: an address, a repeated wallet, units of 0, a payload that does not match `approvalType` |
+| `1423` | `titleDeed` is not the deed ADREC's registry issues for that property |
+| `1424` | No `titleDeed` was sent |
+| `1403` | Called with an officer token |
+
+<RequestExample>
+```json Request
+{
+  "approvalType": "PRIMARY_ISSUANCE",
+  "propertyRef": "71744",
+  "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+  "offeringName": "Parkway Villa 12 — Dual-Token",
+  "titleSafe": "0x8f2D0b6a1E5c4F37b9A1d2e3c4B5a6978F0e1D2c",
+  "titleToken": "0x0D9eBb27bFCC6CfC7ae88f119B68DCD1977856CE",
+  "reference": "issuance:5c5cbc33-82c5-4ced-9b3c-fe07e3329497",
+  "titleDeed": {
+    "plotId": 71744,
+    "propertyId": 71744001,
+    "titleDeedNumber": "AD-2024-071744",
+    "sha256": "9aa0a6bd0aaf22c66ab98909f784efb51d04e185c74467fcb507612f781e998c",
+    "anchor": "adrec:title-deed?plot=71744&property=71744001&deed=AD-2024-071744&sha256=9aa0a6bd0aaf22c66ab98909f784efb51d04e185c74467fcb507612f781e998c"
+  },
+  "allocations": [
+    { "wallet": "0xEf673Ba4452d3147a9B57C2BB1b186B27a63beB6", "units": 50 },
+    { "wallet": "0x4DE592a755C2e007EaB8D10b715Ef5B94E16d0Ef", "units": 50 }
+  ]
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response · 201
+{
+  "approvalId": "APR-EA0ACC036108",
+  "approvalType": "PRIMARY_ISSUANCE",
+  "state": "PENDING",
+  "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+  "offeringName": "Parkway Villa 12 — Dual-Token",
+  "createdAt": "2026-10-16T20:45:35Z",
+  "expiresAt": "2026-10-19T20:45:35Z",
+  "status": 1,
+  "responseMessage": "Success",
+  "errorCode": 0
+}
+```
+</ResponseExample>
