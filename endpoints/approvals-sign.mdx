@@ -39,7 +39,8 @@ Every check is recorded in ADREC's [audit trail](/endpoints/approvals-audit), pa
 | `batch_structure` | The batch is not the expected whitelist → mints → whitelist reset |
 | `only_the_title_token` / `no_call_to_the_safe` | A call targets anything but the Title Token, or the Safe itself |
 | `functions_allowed` | A call uses a function outside ADREC's allowlist |
-| `matches_approved_content` | The wallets or units differ from what the officer approved |
+| `matches_approved_content` | The wallets or amounts differ from what the officer approved (each mint must be `units × 10^decimals`) |
+| `decimals_are_the_title_tokens` | The Title Token's `decimals()` is not the `decimals` the request was filed with |
 | `title_deed_anchored` | The Title Token's `documentUri()` is not the approved deed's anchor |
 
 ## Response

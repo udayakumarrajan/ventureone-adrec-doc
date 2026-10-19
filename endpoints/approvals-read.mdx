@@ -31,7 +31,8 @@ The list returns `{ approvals: [ … ] }` in the envelope.
 | `propertyRef` / `offeringId` / `offeringName` | string | As filed |
 | `titleSafe` / `titleToken` | address | As filed, checksummed |
 | `reference` | string | VentureOne's reference, as filed |
-| `allocations[]` / `transfer` / `documents[]` | — | The payload, as filed |
+| `allocations[]` / `transfer` / `documents[]` | — | The payload, as filed; `units` are whole tokens |
+| `decimals` | int | The Title Token's decimals, as filed and checked |
 | `titleDeed` | object | The deed, as filed and checked |
 | `createdAt` / `expiresAt` | datetime | An undecided request cannot be approved after `expiresAt` |
 | `decidedBy` / `decidedAt` / `decisionReason` | — | The officer's decision |
@@ -57,6 +58,7 @@ The list returns `{ approvals: [ … ] }` in the envelope.
   ],
   "transfer": null,
   "documents": [],
+  "decimals": 0,
   "titleDeed": { "plotId": 71744, "propertyId": 71744001, "titleDeedNumber": "AD-2024-071744",
                  "sha256": "9aa0a6bd…998c", "anchor": "adrec:title-deed?plot=71744&…" },
   "createdAt": "2026-10-16T20:45:35Z",

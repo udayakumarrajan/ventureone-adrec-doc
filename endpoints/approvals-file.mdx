@@ -24,8 +24,9 @@ POST /approvals
 | `allocations[]` | object[] | For `PRIMARY_ISSUANCE` | `{ wallet, units }` per investor; each wallet once, never the Safe or the token; `units > 0` |
 | `transfer` | object | For `SECONDARY_TRANSFER` | `{ fromWallet, toWallet, units }` |
 | `documents[]` | object[] | For `DOCUMENT_ANCHORING` | `{ name, uri, hash }`; `name` and `hash` are bytes32 hex |
+| `decimals` | int | **REQUIRED** | The Title Token's decimals, 0–36 |
 
-`units` are token base units. VentureOne's tokens have 0 decimals, so units are whole fractions.
+`units` are **whole tokens**, never base units: 50 means 50 tokens. ADREC turns them into the amounts the chain moves as `units × 10^decimals`, and checks `decimals` against the Title Token's own `decimals()` before signing. VentureOne files only whole tokens.
 
 ## Response
 
@@ -33,7 +34,7 @@ POST /approvals
 
 | Error | When |
 | --- | --- |
-| `1000` | A field is missing or invalid: an address, a repeated wallet, units of 0, a payload that does not match `approvalType` |
+| `1000` | A field is missing or invalid: an address, a repeated wallet, units of 0, `units × 10^decimals` beyond uint256, a payload that does not match `approvalType` |
 | `1423` | `titleDeed` is not the deed ADREC's registry issues for that property |
 | `1424` | No `titleDeed` was sent |
 | `1403` | Called with an officer token |
@@ -58,7 +59,8 @@ POST /approvals
   "allocations": [
     { "wallet": "0xEf673Ba4452d3147a9B57C2BB1b186B27a63beB6", "units": 50 },
     { "wallet": "0x4DE592a755C2e007EaB8D10b715Ef5B94E16d0Ef", "units": 50 }
-  ]
+  ],
+  "decimals": 0
 }
 ```
 </RequestExample>

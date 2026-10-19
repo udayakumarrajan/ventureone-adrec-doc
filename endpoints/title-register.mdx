@@ -9,6 +9,8 @@ GET /title-register/{titleToken}
 
 **Platform or officer token.** ADREC's record of how many Title units each wallet holds for one Title Token, and the settlements that built it. It changes only through a [settlement](/endpoints/approvals-settlement) ADREC has checked on its own node.
 
+Units here are whole tokens, as filed, never base units. VentureOne multiplies them by the token's `10^decimals` before comparing them with on-chain balances.
+
 VentureOne reconciles every wallet against four sources, at completion and nightly: its own records, this register, the Title Token balance and the ARVA Token balance. A wallet where any of them differ stops the raise for a person. This is also how a Title movement made by ADREC alone (key 1 + key 2) shows up on VentureOne's side.
 
 ## Response
@@ -17,7 +19,7 @@ VentureOne reconciles every wallet against four sources, at completion and night
 | --- | --- | --- | --- |
 | `titleToken` | address | **REQUIRED** | Echoes the request |
 | `totalUnits` | int | **REQUIRED** | Sum of `holders[].units` |
-| `holders[]` | object[] | **REQUIRED** | `{ wallet, units }`, largest holding first; wallets holding nothing are omitted |
+| `holders[]` | object[] | **REQUIRED** | `{ wallet, units }` in whole tokens, largest holding first; wallets holding nothing are omitted |
 | `settlements[]` | object[] | **REQUIRED** | `{ approvalId, offeringId, offeringName, txHash, blockNumber, settledAt, units }`, oldest first |
 | `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
 
