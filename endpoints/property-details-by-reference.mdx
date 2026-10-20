@@ -1,46 +1,58 @@
 ---
-title: "Property Details by DLD Number"
-description: "Look up one property by its land-department (DLD) number — the deed-level key resolved to the canonical property record."
+title: "Property Details by Reference"
+description: "Look up one property by a reference the issuer holds — its title deed number today — resolved to the canonical property record."
 ---
 
 <Note>🔒 **Encrypted payload — response.** Identical to [Property Details](/endpoints/property-details): the body contains owner identities (`ownerships[]`, `eidNumber`). Encrypt the whole body; or, if preferred, encrypt only the `ownerships[]` section per the [granularity rule](/introduction/security#granularity-whole-payload-by-default).</Note>
 
 ```http
-GET /property/details/by-dld/{dldNumber}
+GET /property/details/by-reference?referenceType={referenceType}&referenceValue={referenceValue}
 ```
 
-The same record as [Property Details](/endpoints/property-details), addressed by the **land-department (DLD) number** instead of the `(plotID, propertyId)` pair. Use it when the only identifier you hold is the one printed on the deed or supplied by the issuer — a document upload, an onboarding form, a bank reference.
+The same record as [Property Details](/endpoints/property-details), addressed by a **reference the issuer holds** instead of the `(plotID, propertyId)` pair. Use it when the only identifier you hold is the one printed on the deed or supplied by the issuer — a document upload, an onboarding form, a bank reference.
 
-**This endpoint is the DLD number → `(plotID, propertyId)` resolver.** It runs in the opposite direction from [Owner Properties](/endpoints/owner-properties) (identity → properties) and [Property Details](/endpoints/property-details) (plot → properties). The response echoes both `plotID` and `propertyId`, so it is the entry point for every downstream property-scoped call. See [Identifiers](/introduction/conventions#identifiers-plot-property-owner).
+**This endpoint is the reference → `(plotID, propertyId)` resolver.** It runs in the opposite direction from [Owner Properties](/endpoints/owner-properties) (identity → properties) and [Property Details](/endpoints/property-details) (plot → properties). The response echoes both `plotID` and `propertyId`, so it is the entry point for every downstream property-scoped call. See [Identifiers](/introduction/conventions#identifiers-plot-property-owner).
 
 ## This is a lookup, not a search
 
-A DLD number is a **deed-level identifier: one number, one registrable property, one owner set.** It does not select a scope the way `plotID` does, so the response is a **single flat object** — the same shape as [Title State](/endpoints/title-state) and [Valuation](/endpoints/valuation), not the list returned by Property Details.
+A title deed number is a **deed-level identifier: one number, one registrable property, one owner set.** It does not select a scope the way `plotID` does, so the response is a **single flat object** — the same shape as [Title State](/endpoints/title-state) and [Valuation](/endpoints/valuation), not the list returned by Property Details.
 
 | Key | Identifies | Response root |
 | --- | --- | --- |
 | `plotID` (+ optional `propertyId`) | A **scope** — every property on the plot | `propertyDetails[]` list ([Property Details](/endpoints/property-details)) |
-| `dldNumber` | **One property** | Flat object — this page |
+| `referenceType` + `referenceValue` | **One property** | Flat object — this page |
 
 <Info>
   The property **fields** are unchanged — this response carries exactly the [`Property`](/endpoints/property-details#property-identifiers-registration) schema returned in Property Details' `propertyDetails[]` items, inlined at the root alongside the envelope. One model class serves both endpoints; only the wrapper differs.
 </Info>
 
-## Path parameter
+## Query parameters
 
 | Param | Type | Req. | Use |
 | --- | --- | --- | --- |
-| `dldNumber` | string | **REQUIRED** | The land-department property registration number. Treat as an **opaque string** — it is not an integer and may carry separators or a year segment |
+| `referenceType` | enum | **REQUIRED** | The kind of reference. `TITLE_DEED_NUMBER` today |
+| `referenceValue` | string | **REQUIRED** | The reference itself. Treat as an **opaque string** — it is not an integer and may carry separators or a year segment |
+
+### Reference types
+
+Registries do not all key a property the same way, and the names differ by emirate (Dubai calls the title deed number a "DLD number"). The lookup therefore names the kind of reference it is given.
+
+| `referenceType` | Identifies | Status |
+| --- | --- | --- |
+| `TITLE_DEED_NUMBER` | A completed, registered property by its title deed | **Required** |
+| *(off-plan / initial registration, unit registration certificate, lease or Musataha registration)* | Properties registered before or without a title deed | To confirm with ADREC — names, formats and whether each resolves to one property |
+
+An unknown `referenceType` returns `422`.
 
 <Note>
-  `dldNumber` is a string, never an int. Parsing it numerically drops leading zeros and breaks any format carrying `-` or `/`. Match exactly — do not normalise case, strip separators, or trim segments before sending.
+  `referenceValue` is a string, never an int. Parsing it numerically drops leading zeros and breaks any format carrying `-` or `/`. Match exactly — do not normalise case, strip separators, or trim segments before sending.
 </Note>
 
 There are no `pageNumber` / `pageSize` parameters. A deed-level key resolves to one property, so there is nothing to page over.
 
 ## Superseded numbers
 
-**Deed numbers are reissued on transfer.** "One DLD number → one property" holds, but the reverse does not hold over time: a property that has changed hands carries a *current* number and a trail of superseded ones. A number lifted from a scanned document may therefore be historical.
+**Deed numbers are reissued on transfer.** "One title deed number → one property" holds, but the reverse does not hold over time: a property that has changed hands carries a *current* number and a trail of superseded ones. A number lifted from a scanned document may therefore be historical.
 
 <Warning>
   The contract must define what a superseded number does — **resolve to the property's current record, or return `404`.** These are not interchangeable: resolving silently means a caller can validate ownership against a record it did not think it asked for, while a `404` on a valid historical deed sends a legitimate issuer down a dead end. Either is acceptable, but it must be [confirmed with ADREC](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec) and stated here, not left to the implementation.
@@ -70,12 +82,12 @@ Unchanged from Property Details. Refer to those sections rather than a second co
 - [Tenancy & project](/endpoints/property-details#tenancy-project) — `isRented`, `tenancyAgreements[]`, off-plan fields
 
 <Note>
-  The `dldNumber` you queried is **not** echoed as its own field. It is expected to arrive as `titleDeedNumber` where the two are the same registry value — [confirm that mapping with ADREC](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec). Until it is confirmed, correlate on the value you sent, not on a field you assume matches it.
+  The `referenceValue` you queried is **not** echoed as its own field. For `TITLE_DEED_NUMBER` it is expected to arrive as `titleDeedNumber` — [confirm that mapping with ADREC](/introduction/scope-and-reconciliation#gaps-items-to-confirm-with-adrec). Until it is confirmed, correlate on the value you sent, not on a field you assume matches it.
 </Note>
 
 ## Not found
 
-An unknown DLD number returns **`404`** with `status: 0` and `errorCode 1404`. A single-object response has no empty state to return, so absence is an error here — unlike the list endpoints, where "no match" is `totalCount: 0` on a `200`.
+An unknown reference returns **`404`** with `status: 0` and `errorCode 1404`. A single-object response has no empty state to return, so absence is an error here — unlike the list endpoints, where "no match" is `totalCount: 0` on a `200`.
 
 <RequestExample>
 ```http Headers
@@ -127,10 +139,10 @@ Authorization: Bearer <access-token>
 }
 ```
 
-```json GET /property/details/by-dld/AD-2026-999999 · 404
+```json GET /property/details/by-reference?referenceType=TITLE_DEED_NUMBER&referenceValue=AD-2026-999999 · 404
 {
   "status": 0,
-  "responseMessage": "No property matches DLD number AD-2026-999999",
+  "responseMessage": "No property matches TITLE_DEED_NUMBER AD-2026-999999",
   "errorCode": 1404
 }
 ```

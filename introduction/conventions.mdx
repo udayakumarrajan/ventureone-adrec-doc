@@ -74,7 +74,7 @@ Omitting `propertyId` where the endpoint allows it widens the call to **plot sco
 
 [Property Details](/endpoints/property-details) is the resolver. `GET /property/details?plotID={plotID}` returns `propertyDetails[]` — one item per property on the plot, each with its `propertyId` and its own `ownerships[]`. Add `&ownerId=` to return only the properties a given party owns.
 
-Where the only identifier you hold is the land-department (DLD) number, [Property Details by DLD Number](/endpoints/property-details-by-dld) resolves in the opposite direction — DLD number → the `(plotID, propertyId)` pair — and returns the same record.
+Where the only identifier you hold is a registry reference such as the title deed number, [Property Details by Reference](/endpoints/property-details-by-reference) resolves in the opposite direction — reference → the `(plotID, propertyId)` pair — and returns the same record.
 
 ```
 plotID 506999

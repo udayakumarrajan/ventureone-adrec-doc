@@ -23,7 +23,7 @@ The core record for a property. It is deliberately broad: it carries the attribu
 | `pageNumber` / `pageSize` | int | OPTIONAL | [Pagination](/introduction/conventions#pagination) — pages over `propertyDetails[]` |
 
 <Info>
-  Hold a **DLD number** instead of a `plotID`? [Property Details by DLD Number](/endpoints/property-details-by-dld) resolves it to the `(plotID, propertyId)` pair and returns the same `Property` fields as a single object.
+  Hold a **title deed number** (or another registry reference) instead of a `plotID`? [Property Details by Reference](/endpoints/property-details-by-reference) resolves it to the `(plotID, propertyId)` pair and returns the same `Property` fields as a single object.
 </Info>
 
 <Note>
@@ -39,7 +39,7 @@ The core record for a property. It is deliberately broad: it carries the attribu
 | `status` / `responseMessage` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
 
 <Note>
-  **The list is plot-scoped by design.** `plotID` selects a *scope*, so the root is a list even when the filter narrows it — the same shape as [Property Status](/endpoints/property-status). Supplying `propertyId` is a guarantee, not a hint: `totalCount` is then **`0` or `1`** and `propertyDetails` holds at most that one item, so a caller need not loop. Endpoints keyed on a single property — [Title State](/endpoints/title-state), [Valuation](/endpoints/valuation), [Property Details by DLD Number](/endpoints/property-details-by-dld) — return a flat object instead.
+  **The list is plot-scoped by design.** `plotID` selects a *scope*, so the root is a list even when the filter narrows it — the same shape as [Property Status](/endpoints/property-status). Supplying `propertyId` is a guarantee, not a hint: `totalCount` is then **`0` or `1`** and `propertyDetails` holds at most that one item, so a caller need not loop. Endpoints keyed on a single property — [Title State](/endpoints/title-state), [Valuation](/endpoints/valuation), [Property Details by Reference](/endpoints/property-details-by-reference) — return a flat object instead.
 </Note>
 
 ### `Property` — identifiers & registration
