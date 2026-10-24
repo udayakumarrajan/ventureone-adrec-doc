@@ -20,6 +20,11 @@ POST /approvals/{approvalId}/signatures
 | `safe` | address | **REQUIRED** | The Title Safe |
 | `safeTx` | object | **REQUIRED** | The Safe transaction, Safe field names: `to`, `value`, `data`, `operation`, `safeTxGas`, `baseGas`, `gasPrice`, `gasToken`, `refundReceiver`, `nonce` |
 | `safeTxHash` | string | **REQUIRED** | The hash VentureOne expects. ADREC recomputes it and refuses a mismatch |
+| `allocations[]` | object[] | OPTIONAL | **Proposed.** An issuance minted in batches: the allocations this transaction mints (`wallet`, `units` in whole tokens). Each must be in the approval, with exactly its approved units, and not minted by an earlier batch. Omitted, the transaction mints every allocation still to mint |
+
+<Info>
+  **Proposed: one approval, minted in batches.** A Safe transaction carries at most about 100 mints (gas, and a Safe's 200-call limit), so a raise with more investors is minted in several transactions. The officer approves the whole raise once; VentureOne then sends one transaction per batch, each checked and co-signed under that approval. To be confirmed with ADREC.
+</Info>
 
 ## The verifier's checks
 
@@ -27,7 +32,8 @@ Every check is recorded in ADREC's [audit trail](/endpoints/approvals-audit), pa
 
 | Check | Refuses when |
 | --- | --- |
-| `approval_is_approved` / `approval_not_expired` | The request is not `APPROVED`, or has expired |
+| `approval_is_approved` / `approval_not_expired` | The request is not `APPROVED`, or its minting window (`mintBy`) has closed |
+| `batch_is_part_of_the_approval` | **Proposed.** The named batch has a wallet not in the approval, a different amount, a wallet twice, or a wallet an earlier batch minted |
 | `hash_recomputed` | ADREC's own hash of `safeTx` differs from `safeTxHash` |
 | `safe_is_the_approved_title_safe` | `safe` is not the Title Safe the request names |
 | `safe_deployed` | No Safe at that address on ADREC's node |
@@ -39,7 +45,7 @@ Every check is recorded in ADREC's [audit trail](/endpoints/approvals-audit), pa
 | `batch_structure` | The batch is not the expected whitelist → mints → whitelist reset |
 | `only_the_title_token` / `no_call_to_the_safe` | A call targets anything but the Title Token, or the Safe itself |
 | `functions_allowed` | A call uses a function outside ADREC's allowlist |
-| `matches_approved_content` | The wallets or amounts differ from what the officer approved (each mint must be `units × 10^decimals`) |
+| `matches_approved_content` | The wallets or amounts differ from what the officer approved for this transaction: its batch, or everything still to mint (each mint must be `units × 10^decimals`) |
 | `decimals_are_the_title_tokens` | The Title Token's `decimals()` is not the `decimals` the request was filed with |
 | `title_deed_anchored` | The Title Token's `documentUri()` is not the approved deed's anchor |
 
@@ -50,7 +56,7 @@ Every check is recorded in ADREC's [audit trail](/endpoints/approvals-audit), pa
 | `SIGNED` | Every check passed; `signature` carries key 1's signature |
 | `SIGNING` | ADREC's custody is still approving; poll [`GET /approvals/{approvalId}`](/endpoints/approvals-read) |
 
-A failed check answers `1000` with the check's name in `responseMessage`, and nothing is signed. The approval stays `APPROVED`, so a corrected transaction can be sent. Once the approval is spent on a transaction, any other transaction is `1409`: one approval, one transaction.
+A failed check answers `1000` with the check's name in `responseMessage`, and nothing is signed. The approval stays `APPROVED`, so a corrected transaction can be sent. While a transaction is in flight on the approval (`SIGNING` or `SIGNED`), any other transaction is `1409`: one transaction at a time. Asking again for the same transaction returns its signature. Once its batch [settles](/endpoints/approvals-settlement), the approval is `APPROVED` again for the next batch.
 
 <RequestExample>
 ```json Request
