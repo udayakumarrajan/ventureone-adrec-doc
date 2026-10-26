@@ -35,10 +35,13 @@ The list returns `{ approvals: [ … ] }` in the envelope.
 | `decimals` | int | The Title Token's decimals, as filed and checked |
 | `titleDeed` | object | The deed, as filed and checked |
 | `createdAt` / `expiresAt` | datetime | An undecided request cannot be approved after `expiresAt` |
+| `mintBy` | datetime | The minting window: every transaction under the approval must be signed before it (72 hours after the officer's decision today) |
 | `decidedBy` / `decidedAt` / `decisionReason` | — | The officer's decision |
-| `safeTxHash` | string | The Safe transaction this approval was spent on; set from `SIGNING` |
+| `safeTxHash` | string | The Safe transaction in flight on this approval; set from `SIGNING` |
+| `batch[]` | object[] | The allocations the transaction in flight mints |
+| `batches[]` | object[] | Every transaction settled under this approval, oldest first: `safeTxHash`, `txHash`, `blockNumber`, `allocations[]`, `settledAt` |
 | `signature` | string | Key 1's signature; set when `SIGNED` |
-| `settlementTxHash` / `settlementBlock` / `settledAt` | — | The mined transaction ADREC checked; set when `SETTLED` |
+| `settlementTxHash` / `settlementBlock` / `settledAt` | — | The last mined transaction ADREC checked |
 
 <ResponseExample>
 ```json Response · SETTLED

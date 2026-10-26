@@ -7,7 +7,7 @@ description: "VentureOne reports the mined transaction; ADREC checks it on its o
 POST /approvals/{approvalId}/settlement
 ```
 
-**Platform token only.** Once the transaction carrying a `SIGNED` request's Title Safe transaction is mined, VentureOne reports its hash. ADREC **does not take the report's word**: it reads the receipt from its own node and runs the checks below. Only then is the request `SETTLED`, and the minted units are entered in ADREC's [title register](/endpoints/title-register) in the same database transaction, as whole tokens (the mints divided by `10^decimals`).
+**Platform token only.** Once the transaction carrying a `SIGNED` request's Title Safe transaction is mined, VentureOne reports its hash. ADREC **does not take the report's word**: it reads the receipt from its own node and runs the checks below. Only then are the minted units entered in ADREC's [title register](/endpoints/title-register), in the same database transaction, as whole tokens (the mints divided by `10^decimals`). The request is `SETTLED` once nothing is left to mint. An issuance minted in batches settles once per batch; after a batch that leaves allocations to mint, the request is `APPROVED` again for the next one, and the batch is listed in its `batches[]`.
 
 ## Body
 
@@ -21,8 +21,8 @@ POST /approvals/{approvalId}/settlement
 | --- | --- |
 | `primary_issuance` | The request is not a `PRIMARY_ISSUANCE` (other types do not settle yet) |
 | `transaction_succeeded` | The receipt's status is not success |
-| `title_safe_executed_the_signed_transaction` | The Title Safe did not emit exactly one `ExecutionSuccess` for the Safe transaction ADREC signed, or emitted an `ExecutionFailure` for it |
-| `minted_exactly_as_approved` | The Title Token's mints in this transaction differ, wallet by wallet, from the approved allocations (`units × 10^decimals` base units each) |
+| `title_safe_executed_the_signed_transaction` | The Title Safe did not emit exactly one `ExecutionSuccess` for the Safe transaction ADREC signed (or one it [replaced](/endpoints/approvals-sign) at the same nonce), or emitted an `ExecutionFailure` for it |
+| `minted_exactly_as_approved` | The Title Token's mints in this transaction differ, wallet by wallet, from the allocations ADREC signed it for: the batch, or the whole approval (`units × 10^decimals` base units each) |
 | `no_other_title_movements` | The Title Token moved anything besides those mints |
 
 A failed check answers `1000` naming the check, is recorded as `settlement_refused` with every check, and leaves the request `SIGNED`. Nothing enters the register.
@@ -31,7 +31,7 @@ A failed check answers `1000` naming the check, is recorded as `settlement_refus
 
 | Situation | Answer | VentureOne |
 | --- | --- | --- |
-| The same transaction reported again | `200`, the settled request | Treats it as done; a lost answer is never a problem |
+| The same transaction reported again | `200`, the request as it now is | Treats it as done; a lost answer is never a problem |
 | ADREC's node has no receipt yet | `425`, `errorCode 1425` | Reports again later; a node can lag a block behind |
 | A different transaction for a settled request | `409` | Stops for a person |
 | ADREC's node does not answer | `503` | Reports again later |

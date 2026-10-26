@@ -100,13 +100,17 @@ See [Recommendations](/introduction/dual-token-recommendations) for approving a 
 | `PENDING` | Filed; waiting for an officer | `APPROVED`, `REJECTED` |
 | `APPROVED` | An officer approved it; nothing signed yet | `SIGNING` |
 | `SIGNING` | ADREC is signing one specific transaction | `SIGNED`, or back to `APPROVED` if signing failed definitively |
-| `SIGNED` | Key 1's signature is delivered | `SETTLED` |
+| `SIGNED` | Key 1's signature is delivered | `SETTLED`, or back to `APPROVED` when its batch settles with allocations left to mint |
 | `SETTLED` | The mined transaction was checked; units are in the title register | — |
 | `REJECTED` | An officer rejected it | — |
 
 <Warning>
-  **One approval, one transaction.** Once an approval is used to sign a Safe transaction, it cannot sign another, however similar. A request not decided within its validity (72 hours today) expires and must be filed again.
+  **One transaction at a time.** While an approval is signing a Safe transaction, it cannot sign another, however similar. A request not decided within its validity (72 hours today) expires and must be filed again.
 </Warning>
+
+<Info>
+  **One approval per raise, minted in batches.** The officer approves every allocation of a raise at once. A Safe transaction carries only so many mints, so VentureOne mints them in batches under that approval: each batch is named in the [signature request](/endpoints/approvals-sign), checked to be a part of the approval not minted yet, co-signed, and [settled](/endpoints/approvals-settlement) on its own. No allocation is minted twice, and every batch must be signed within the minting window (`mintBy`).
+</Info>
 
 ## Approval types
 
