@@ -5,6 +5,19 @@ description: "Response envelope, coded fields, units, dates, and pagination used
 
 These conventions apply to **every** endpoint unless a page states otherwise.
 
+## Versioning
+
+The dual-token, register, event and webhook APIs are versioned: every path is served under `/v1`, as this reference shows. Three kinds of path are not versioned: OAuth sign-in (`/oauth/token`), whose path its standard fixes; the public deed verification a deed's QR code opens (`/title-deeds/{deedNumber}/verification`), which must keep working for as long as the deed exists; and the property registry paths (`/property/...`, `/reference/...`).
+
+The dual-token paths are still served at their original unversioned paths (for example `/approvals`) for callers that have not moved yet. Every answer there carries `Deprecation: true` and a `Link` header naming the `/v1` path:
+
+```http
+Deprecation: true
+Link: </v1/approvals>; rel="successor-version"
+```
+
+Move to `/v1`: the unversioned paths will be removed in a later version.
+
 ## Response envelope
 
 Every response wraps its payload in a common envelope so callers can branch on success uniformly.

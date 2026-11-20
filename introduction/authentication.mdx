@@ -1,0 +1,95 @@
+---
+title: "Authentication"
+description: "Partners sign in with OAuth 2.0 client credentials and call ADREC with a short-lived bearer token, limited to the scopes its credential holds."
+---
+
+Every partner call carries a bearer access token. You get one by signing in at `POST /oauth/token` with a **client credential** that ADREC issues to your integration. There are no long-lived API tokens: a token lasts 15 minutes, and revoking a credential stops its tokens at once.
+
+<Info>
+  This is the scheme VentureOne's regulator service implements, and VentureOne's orchestrator signs in this way for every call: approvals, settlements, webhook secrets and registry lookups alike. It is proposed as the scheme for ADREC's own APIs.
+</Info>
+
+## Credentials
+
+ADREC creates your integration and issues its client credentials. A credential is a `client_id` and a `client_secret`.
+
+- **Delivery.** The secret is shown once, when the credential is made. For VentureOne's orchestrator it may instead be written to a Key Vault secret only the orchestrator can read. Never send a secret by email or chat.
+- **Expiry.** A credential never expires unless ADREC sets an expiry when making it.
+- **Rotation.** Changing a secret, narrowing a credential's scopes, revoking it or suspending your integration ends every token issued for it at once. Sign in again after a `401`.
+- **Several at once.** An integration may hold several credentials, so you can roll to a new one before the old is revoked.
+
+## Sign in
+
+```http
+POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=<client-id>&client_secret=<client-secret>
+```
+
+You may send the client id and secret as HTTP Basic instead of in the body. Add `scope` (space-separated) to ask for fewer scopes than the credential holds.
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `grant_type` | string | **REQUIRED** | `client_credentials` |
+| `client_id` | string | CONDITIONAL | Unless sent as HTTP Basic |
+| `client_secret` | string | CONDITIONAL | Unless sent as HTTP Basic |
+| `scope` | string | OPTIONAL | Some of the credential's scopes; omitted, you get all of them |
+
+<ResponseExample>
+```json 200
+{
+  "access_token": "<opaque token>",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "scope": "approvals:read approvals:write settlements:write events:read register:read register:write webhooks:read"
+}
+```
+
+```json 401
+{ "error": "invalid_client" }
+```
+</ResponseExample>
+
+Send the token on every call:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+Keep the token until shortly before `expires_in` runs out, and sign in again on a `401`. Never put a token or secret in a URL.
+
+### Sign-in errors
+
+| HTTP | `error` | Meaning |
+| --- | --- | --- |
+| `400` | `unsupported_grant_type` | `grant_type` is not `client_credentials` |
+| `400` | `invalid_scope` | You asked for a scope the credential does not hold |
+| `401` | `invalid_client` | Unknown client id, wrong secret, or a revoked, expired or suspended credential |
+| `429` | `too_many_requests` | Too many failed sign-ins for this client id or from this address; wait for `Retry-After` |
+
+A correct secret always signs in. Only failed attempts count towards the limit, so another caller's failures cannot lock you out.
+
+## Scopes
+
+Every partner route names the scope it needs. A token without it gets `403` `insufficient_scope`.
+
+| Scope | Lets you |
+| --- | --- |
+| `approvals:read` | Read the approval requests you filed |
+| `approvals:write` | File approval requests, ask for ADREC's signature, ask for a cancellation |
+| `settlements:write` | Report settled and cancelled transactions |
+| `events:read` | Read your [event feed](/endpoints/events) |
+| `register:read` | Read title registers, tokenizations, deeds and register history, and the property registry |
+| `register:write` | Record a property as tokenized |
+| `webhooks:read` | Read your [webhooks and their signing secrets](/endpoints/partner-webhooks#signing-secrets) |
+
+ADREC sets which scopes your integration may hold. Each credential holds some or all of them.
+
+## Client certificates (mTLS)
+
+ADREC may require an integration to present a client certificate. You upload the public certificate to ADREC; from then on every sign-in and every call must come over mutual TLS with that certificate, or it is refused with `401`.
+
+## Partner isolation
+
+A token acts for one partner. You see only your own approvals, events, registers and webhooks; another partner's are answered `404`, enforced down to the database. A suspended partner is refused on its next call.

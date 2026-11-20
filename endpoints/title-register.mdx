@@ -4,10 +4,10 @@ description: "ADREC's register of Title units per wallet for one Title Token, bu
 ---
 
 ```http
-GET /title-register/{titleToken}
+GET /v1/title-register/{titleToken}
 ```
 
-**Platform or officer token.** ADREC's record of how many Title units each wallet holds for one Title Token, and the settlements that built it. It changes only through a [settlement](/endpoints/approvals-settlement) ADREC has checked on its own node.
+**Partner token with `register:read`, or an officer token.** ADREC's record of how many Title units each wallet holds for one Title Token, and the settlements that built it. It changes only through a [settlement](/endpoints/approvals-settlement) ADREC has checked on its own node.
 
 Units here are whole tokens, as filed, never base units. VentureOne multiplies them by the token's `10^decimals` before comparing them with on-chain balances.
 

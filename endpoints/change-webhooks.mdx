@@ -21,7 +21,6 @@ Once a property is tokenized, VentureOne must detect **any** registry change and
 | `propertyId` | int | CONDITIONAL | **The affected property.** REQUIRED for every property-scoped event; omitted only for genuinely plot-wide changes (e.g. a boundary or subdivision change) |
 | `changedAt` | datetime | **REQUIRED** | ISO-8601 |
 | `details` | object | OPTIONAL | Event-specific payload (may carry PII → encrypted) |
-| `signature` | string | **REQUIRED** | JWS / HMAC-SHA256 over the event |
 
 <Warning>
   **An event without `propertyId` cannot be routed.** VentureOne freezes an offering on a registry change; if an event only names the plot, every offering on that plot must be frozen and every property re-read to find the one that actually moved. On a subdivided plot that means suspending unrelated live offerings. ADREC must emit `propertyId` for `SALE`, `MORTGAGE`, `BLOCKING`, `OWNERSHIP_CHANGE` and `TENANCY_CHANGE`.
@@ -31,7 +30,7 @@ Once a property is tokenized, VentureOne must detect **any** registry change and
 
 ## Signature
 
-Every webhook is signed so VentureOne can verify authenticity before acting. Verify the `signature` (JWS) or the `X-Signature` HMAC header **before** processing, and reject stale timestamps to prevent replay. VentureOne responds `2xx` on successful receipt; ADREC retries with backoff otherwise.
+Every webhook is signed so VentureOne can verify authenticity before acting. Sign change webhooks the same way as ADREC's approval [webhooks](/endpoints/partner-webhooks#signature): an HMAC over the `webhook-id`, `webhook-timestamp` and raw body, in the `webhook-signature` header, with a secret of that webhook's own. VentureOne verifies it **before** processing and rejects stale timestamps to prevent replay. VentureOne responds `2xx` on successful receipt; ADREC retries with backoff otherwise.
 
 ## Delivery & acknowledgement
 
@@ -73,8 +72,7 @@ Returns the same event objects that would have been pushed, for all supplied pro
   "plotID": 506999,
   "propertyId": 506999002,
   "changedAt": "2026-09-01T08:30:00Z",
-  "details": { "contractNumber": "20260000158518", "mortgageAmount": 40000 },
-  "signature": "<jws-compact>"
+  "details": { "contractNumber": "20260000158518", "mortgageAmount": 40000 }
 }
 ```
 

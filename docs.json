@@ -48,7 +48,8 @@
               "introduction/overview",
             
               "introduction/conventions",
-              "introduction/security"
+              "introduction/security",
+              "introduction/authentication"
             ]
           },
           {
@@ -115,6 +116,13 @@
               "endpoints/approvals-settlement",
               "endpoints/title-register",
               "endpoints/approvals-audit"
+            ]
+          },
+          {
+            "group": "Events & Webhooks",
+            "pages": [
+              "endpoints/partner-webhooks",
+              "endpoints/events"
             ]
           },
           {

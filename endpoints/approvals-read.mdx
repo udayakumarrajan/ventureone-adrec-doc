@@ -4,11 +4,11 @@ description: "One approval request by id, or the requests for an offering, by st
 ---
 
 ```http
-GET /approvals/{approvalId}
-GET /approvals?offeringId={offeringId}&reference={reference}&state={state}&limit={limit}
+GET /v1/approvals/{approvalId}
+GET /v1/approvals?offeringId={offeringId}&reference={reference}&state={state}&limit={limit}
 ```
 
-**Platform or officer token.** VentureOne polls `GET /approvals/{approvalId}` until an officer decides, and again while a signature is `SIGNING`. The list form lets VentureOne find a filing whose answer it lost, by its own `reference`, before filing again.
+**Partner token with `approvals:read`, or an officer token.** VentureOne reads `GET /v1/approvals/{approvalId}` when a [webhook](/endpoints/partner-webhooks) or the [event feed](/endpoints/events) says the request changed, and polls it while a signature is `SIGNING`. The list form lets VentureOne find a filing whose answer it lost, by its own `reference`, before filing again.
 
 ## Query parameters (list)
 
