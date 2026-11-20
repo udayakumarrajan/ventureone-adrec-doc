@@ -4,8 +4,8 @@ description: "An ADREC officer decides a pending request, with a reason."
 ---
 
 ```http
-POST /approvals/{approvalId}/approve
-POST /approvals/{approvalId}/reject
+POST /v1/approvals/{approvalId}/approve
+POST /v1/approvals/{approvalId}/reject
 ```
 
 **Officer token only.** VentureOne cannot call these. The decision and its reason are written to ADREC's [audit trail](/endpoints/approvals-audit) with the officer's name.

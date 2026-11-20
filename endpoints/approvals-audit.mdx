@@ -4,8 +4,8 @@ description: "Every step of every approval request, per request or per offering,
 ---
 
 ```http
-GET /approvals/{approvalId}/audit
-GET /approvals/offerings/{offeringId}/audit?limit={limit}
+GET /v1/approvals/{approvalId}/audit
+GET /v1/approvals/offerings/{offeringId}/audit?limit={limit}
 ```
 
 **Officer token only.** ADREC's own record of every step: who did it, the state after it, and for checks, every check with its result. Oldest first. `limit` is 1–2,000 (default 500) on the offering form.

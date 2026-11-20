@@ -1,0 +1,72 @@
+---
+title: "Event feed"
+description: "Every step of your approval requests, in order, read from a cursor: the same events ADREC sends to your webhooks."
+---
+
+```http
+GET /v1/events?after={cursor}&limit={limit}
+```
+
+**Partner token, `events:read`.** Your events, oldest first, after the cursor you pass. These are the events ADREC sends to your [webhooks](/endpoints/partner-webhooks). Read the feed to catch up after downtime, or instead of a webhook.
+
+## Query parameters
+
+| Param | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `after` | string | OPTIONAL | The last cursor you handled; `0` (the default) reads from the start |
+| `limit` | int | OPTIONAL | 1–500, default 100 |
+
+## Reading the feed
+
+1. Call with `after` set to the last cursor you stored.
+2. Handle each event, then store its `cursor`.
+3. Call again with `after` set to `next`, until `events` is empty.
+
+The same cursor always returns the same events, so a read you repeat after a failure is safe. Deduplicate on `eventId` anyway: an event you handled from a webhook appears in the feed too.
+
+## Response
+
+| Field | Type | Req. | Use |
+| --- | --- | --- | --- |
+| `events[]` | object[] | **REQUIRED** | Oldest first; empty when nothing is new |
+| `events[].eventId` | string | **REQUIRED** | Unique per event; the same as a webhook's `eventId` |
+| `events[].cursor` | string | **REQUIRED** | Pass as `after` to read on from this event |
+| `events[].type` | string | **REQUIRED** | One of the [event types](/endpoints/partner-webhooks#event-types) |
+| `events[].approvalId` | string | **REQUIRED** | The approval request |
+| `events[].offeringId` | string | **REQUIRED** | Its offering |
+| `events[].state` | string | **REQUIRED** | The approval's state after this step |
+| `events[].safeTxHash` | string | OPTIONAL | The Safe transaction hash, once there is one |
+| `events[].occurredAt` | datetime | **REQUIRED** | When the step happened |
+| `next` | string | **REQUIRED** | The cursor to read on from; unchanged when nothing is new |
+| `status` / `errorCode` | mixed | **REQUIRED** | [Envelope](/introduction/conventions#response-envelope) |
+
+An `after` that is not a cursor from this feed is refused with `422`.
+
+<RequestExample>
+```http Headers
+Authorization: Bearer <access-token>
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "events": [
+    {
+      "eventId": "evt_1842",
+      "cursor": "1842",
+      "type": "approval.approved",
+      "approvalId": "APR-EA0ACC036108",
+      "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+      "state": "APPROVED",
+      "safeTxHash": null,
+      "occurredAt": "2026-11-20T08:29:58+00:00"
+    }
+  ],
+  "next": "1842",
+  "status": 1,
+  "errorCode": 0,
+  "responseMessage": "Success"
+}
+```
+</ResponseExample>

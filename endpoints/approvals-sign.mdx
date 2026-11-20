@@ -4,10 +4,10 @@ description: "VentureOne sends the Title Safe transaction; ADREC's verifier chec
 ---
 
 ```http
-POST /approvals/{approvalId}/signatures
+POST /v1/approvals/{approvalId}/signatures
 ```
 
-**Platform token only.** VentureOne sends the Title Safe transaction it built for an `APPROVED` request. ADREC's **verifier** recomputes the Safe transaction hash itself, reads the Safe and the Title Token from **ADREC's own node**, and runs every check below. Only if all pass does key 1 sign, through ADREC's custody.
+**Partner token only, `approvals:write`.** VentureOne sends the Title Safe transaction it built for an `APPROVED` request. ADREC's **verifier** recomputes the Safe transaction hash itself, reads the Safe and the Title Token from **ADREC's own node**, and runs every check below. Only if all pass does key 1 sign, through ADREC's custody.
 
 <Warning>
   A signer sees only a hash, which says nothing about what the transaction does. The verifier is what stops ADREC signing, for example, a transaction that makes VentureOne the Title Safe's only owner. It must run on ADREC's side. See [Recommendations](/introduction/dual-token-recommendations).
@@ -55,7 +55,7 @@ Every check is recorded in ADREC's [audit trail](/endpoints/approvals-audit), pa
 | `state` | Meaning |
 | --- | --- |
 | `SIGNED` | Every check passed; `signature` carries key 1's signature |
-| `SIGNING` | ADREC's custody is still approving; poll [`GET /approvals/{approvalId}`](/endpoints/approvals-read) |
+| `SIGNING` | ADREC's custody is still approving; poll [`GET /v1/approvals/{approvalId}`](/endpoints/approvals-read) |
 
 A failed check answers `1000` with the check's name in `responseMessage`, and nothing is signed. The approval stays `APPROVED`, so a corrected transaction can be sent. While a transaction is in flight on the approval (`SIGNING` or `SIGNED`), any other transaction is `1409`: one transaction at a time. Asking again for the same transaction returns its signature. Once its batch [settles](/endpoints/approvals-settlement), the approval is `APPROVED` again for the next batch.
 

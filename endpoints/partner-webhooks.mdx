@@ -1,0 +1,165 @@
+---
+title: "Webhooks"
+description: "ADREC posts each step of your approval requests to your endpoint, signed with a secret of that webhook's own."
+---
+
+```http
+POST  {your webhook URL}   ← ADREC calls you
+```
+
+ADREC sends an event to your endpoint at every step of an approval request: filed, approved or rejected, signed, settled, cancelled. You no longer need to poll for a decision. The same events are in your [event feed](/endpoints/events), which you read to catch up after downtime.
+
+ADREC sets up your webhooks: a URL, the event types it receives, and its signature algorithm. You may have several. Each has its own signing secret.
+
+## Verification
+
+Before a webhook receives events, ADREC proves your endpoint answers for its URL. It posts a signed challenge:
+
+```json
+{
+  "type": "webhook.verification",
+  "challenge": "<random string>",
+  "deliveryId": "vrf_…",
+  "eventId": "vrf_…",
+  "subscriptionId": "<webhook id>",
+  "partnerId": "<your partner id>",
+  "schemaVersion": "2026-11-19",
+  "sentAt": "2026-11-20T08:30:00+00:00",
+  "test": false
+}
+```
+
+Answer `2xx` within 10 seconds with the same challenge:
+
+```json
+{ "challenge": "<the same random string>" }
+```
+
+The webhook becomes active only then. ADREC verifies again whenever the URL changes.
+
+## Event body
+
+```json
+{
+  "eventId": "evt_1842",
+  "deliveryId": "dlv_…",
+  "type": "approval.approved",
+  "schemaVersion": "2026-11-19",
+  "partnerId": "orchestrator",
+  "occurredAt": "2026-11-20T08:29:58+00:00",
+  "sentAt": "2026-11-20T08:30:00+00:00",
+  "test": false,
+  "data": {
+    "approvalId": "APR-EA0ACC036108",
+    "offeringId": "d2cc5188-34b6-405d-9bc4-1f4da5dde11a",
+    "state": "APPROVED",
+    "safeTxHash": null
+  }
+}
+```
+
+| Field | Use |
+| --- | --- |
+| `eventId` | Unique per event, and the same as in the [event feed](/endpoints/events). Drop an event you have already handled |
+| `deliveryId` | Unique per webhook and event; unchanged when the event is sent again |
+| `type` | One of the [event types](#event-types) |
+| `occurredAt` / `sentAt` | When the step happened, and when this attempt was sent |
+| `test` | `true` for a test event ADREC sends from its console; act on nothing |
+| `data` | The approval, its offering, its state after this step, and the Safe transaction hash once there is one |
+
+Treat an event as a signal. Read the approval with [`GET /v1/approvals/{approvalId}`](/endpoints/approvals-read) for its full current state before acting.
+
+## Event types
+
+| Type | Sent when |
+| --- | --- |
+| `approval.filed` | You filed an approval request |
+| `approval.approved` | An officer approved it |
+| `approval.rejected` | An officer rejected it |
+| `approval.verified` | ADREC verified a transaction against the approval |
+| `approval.signed` | ADREC signed a transaction for the approval |
+| `approval.refused` | ADREC refused to sign a transaction for the approval |
+| `approval.signing_failed` | ADREC's custody could not sign; you may ask again |
+| `approval.released` | A signing claim that never completed was released |
+| `approval.replaced` | A transaction for the approval was replaced by another |
+| `approval.settled` | A signed transaction settled on chain |
+| `approval.settlement_refused` | A settlement report was refused |
+| `approval.cancellation_signed` | ADREC signed a cancellation |
+| `approval.cancellation_refused` | ADREC refused to sign a cancellation |
+| `approval.cancelled` | The approval was cancelled on chain |
+| `register.tokenized` | The property was recorded as tokenized and its deeds issued |
+| `webhook.test` | A test event an officer sent (`test: true`) |
+
+## Signature
+
+Every request is signed with the webhook's secret, following [Standard Webhooks](https://www.standardwebhooks.com). That includes the verification challenge and test events.
+
+| Header | Value |
+| --- | --- |
+| `webhook-id` | The `deliveryId` |
+| `webhook-timestamp` | Unix seconds when this attempt was sent |
+| `webhook-signature` | `v1,<base64 HMAC-SHA256>` or `v1-sha512,<base64 HMAC-SHA512>` |
+| `X-Regulator-Signature-Algorithm` | `HMAC-SHA256` or `HMAC-SHA512` |
+| `X-Regulator-Webhook-Id` | The webhook this request is for: which secret to check |
+| `X-Regulator-Event-Id` / `X-Regulator-Event-Type` | The event's id and type |
+
+The signature is an HMAC over `{webhook-id}.{webhook-timestamp}.{raw body}`. The key is the secret's bytes: the base64 after the `whsec_` prefix, decoded.
+
+To accept a request:
+
+1. Find the secret for `X-Regulator-Webhook-Id`.
+2. Compute the HMAC over the **raw body exactly as received**. Never parse and re-serialise it first.
+3. Accept if any signature in `webhook-signature` matches, compared in constant time. During a secret rotation there are two, space-separated, newest first.
+4. Refuse a `webhook-timestamp` more than 5 minutes old.
+5. Deduplicate on `eventId`.
+
+```python Verify (Python)
+import base64, hashlib, hmac, time
+
+def verify(secret: str, headers: dict, body: bytes, algorithm: str = "sha256") -> bool:
+    key = base64.b64decode(secret.removeprefix("whsec_"))
+    message = f"{headers['webhook-id']}.{headers['webhook-timestamp']}.".encode() + body
+    digest = hmac.new(key, message, getattr(hashlib, algorithm)).digest()
+    expected = base64.b64encode(digest).decode()
+    if abs(time.time() - int(headers["webhook-timestamp"])) > 300:
+        return False
+    return any(
+        hmac.compare_digest(sig.split(",", 1)[1], expected)
+        for sig in headers["webhook-signature"].split()
+    )
+```
+
+## Signing secrets
+
+ADREC shows a webhook's secret once, when the webhook is made or its secret changes. You can also read it at any time with your own credential and the `webhooks:read` scope:
+
+```http
+GET /v1/webhooks
+GET /v1/webhooks/{webhookId}/signing-secret
+```
+
+`GET /v1/webhooks` lists your webhooks (never a secret). The signing-secret read answers `Cache-Control: no-store`, and ADREC audits every read:
+
+```json
+{
+  "secret": "whsec_…",
+  "algorithm": "sha256",
+  "previous": { "secret": "whsec_…", "expiresAt": "2026-11-21T08:00:00Z" }
+}
+```
+
+`previous` is present only while a rotation overlaps, so you can check either signature. Cache a secret for a few minutes and read it again when a signature does not match.
+
+## Delivery
+
+| Concern | Behaviour |
+| --- | --- |
+| Success | Any `2xx` |
+| Retried | Timeout, connection error, `408`, `425`, `429`, `5xx` |
+| Not retried | Any other status: the delivery is marked failed at once |
+| Backoff | Exponential from 10 s with full jitter, capped at 1 hour; `Retry-After` honoured up to 1 hour |
+| Gives up | After 12 attempts or 72 hours. ADREC can send it again from its console |
+| Ordering | Not guaranteed. At least once: the same event may arrive more than once |
+| Your endpoint | HTTPS, a public address, no redirects, an answer within 10 seconds |
+
+Missed events are never lost: read your [event feed](/endpoints/events) from the last event you handled.

@@ -4,10 +4,10 @@ description: "VentureOne asks ADREC to approve one Title Token movement: a batch
 ---
 
 ```http
-POST /approvals
+POST /v1/approvals
 ```
 
-**Platform token only.** VentureOne files one request per batch of investors in one offering (see [How many requests ADREC receives](/introduction/dual-token#how-many-requests-adrec-receives)). ADREC validates the content now, so an officer never approves something that cannot be signed, and checks the title deed against its own registry. The request starts `PENDING`.
+**Partner token only, `approvals:write`.** VentureOne files one request per batch of investors in one offering (see [How many requests ADREC receives](/introduction/dual-token#how-many-requests-adrec-receives)). ADREC validates the content now, so an officer never approves something that cannot be signed, and checks the title deed against its own registry. The request starts `PENDING`.
 
 ## Body
 

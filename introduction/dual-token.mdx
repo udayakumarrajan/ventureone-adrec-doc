@@ -20,7 +20,7 @@ Two kinds of credential, never interchangeable:
 
 | Credential | Used by | May call |
 | --- | --- | --- |
-| **Platform token** | VentureOne's orchestrator | File, read, request a signature, report a settlement, read the title register |
+| **Partner token** | VentureOne's orchestrator, signed in with its [client credential](/introduction/authentication) | File, read, request a signature, report a settlement, read the title register and events, each with its scope |
 | **Officer token** | An ADREC officer | Read, approve or reject, read the audit trail, read the title register |
 
 VentureOne can never approve its own request; an officer can never file one.
@@ -37,7 +37,7 @@ VentureOne can never approve its own request; an officer can never file one.
     <br />→ [File an approval request](/endpoints/approvals-file)
   </Step>
   <Step title="Officer decides">
-    An ADREC officer approves or rejects it, with a reason. VentureOne polls; ADREC never calls VentureOne.
+    An ADREC officer approves or rejects it, with a reason. ADREC sends the decision to VentureOne's [webhook](/endpoints/partner-webhooks); VentureOne can also read it from the [event feed](/endpoints/events) or the request itself.
     <br />→ [Approve or reject](/endpoints/approvals-decide) · [Read approval requests](/endpoints/approvals-read)
   </Step>
   <Step title="ADREC co-signs">
@@ -63,18 +63,18 @@ sequenceDiagram
     participant C as Blockchain
     V->>A: GET title deed for the plot
     V->>C: deploy Title Token anchored to the deed
-    V->>A: POST /approvals (wallets, units, deed)
+    V->>A: POST /v1/approvals (wallets, units, deed)
     A-->>V: approvalId, PENDING
     O->>A: approve or reject, with a reason
-    V->>A: GET /approvals/{id} until decided
-    V->>A: POST /approvals/{id}/signatures (Safe transaction)
+    A-->>V: webhook: approval.approved (signed)
+    V->>A: POST /v1/approvals/{id}/signatures (Safe transaction)
     A->>C: read the Title Safe and Title Token
     A-->>V: SIGNED, key 1 signature
     V->>C: one transaction mints Title and ARVA tokens
-    V->>A: POST /approvals/{id}/settlement (tx hash)
+    V->>A: POST /v1/approvals/{id}/settlement (tx hash)
     A->>C: read the receipt
     A-->>V: SETTLED, units in the title register
-    V->>A: GET /title-register/{titleToken}
+    V->>A: GET /v1/title-register/{titleToken}
 ```
 
 ## How many requests ADREC receives

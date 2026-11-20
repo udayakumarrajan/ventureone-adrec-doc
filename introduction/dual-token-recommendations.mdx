@@ -22,8 +22,8 @@ What VentureOne recommends ADREC adopts when it builds these APIs, from building
   <Accordion title="Agree turnaround times and operating hours">
     VentureOne waits for the officer and never proceeds on its own; requests expire after 72 hours undecided. Agree a target turnaround and operating hours, so investors can be told when to expect their tokens.
   </Accordion>
-  <Accordion title="Optional: notify VentureOne of a decision">
-    VentureOne polls today, and ADREC calls nothing of VentureOne's. A decision webhook would shorten the wait after approval. It is an optimisation only: polling stays the source of truth.
+  <Accordion title="Notify VentureOne of a decision">
+    Done: ADREC sends every step, the decision included, to VentureOne's signed [webhook](/endpoints/partner-webhooks). The [event feed](/endpoints/events) and the request itself stay the source of truth, so a missed webhook only delays VentureOne.
   </Accordion>
 </AccordionGroup>
 
